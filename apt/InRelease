@@ -1,0 +1,37 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+Origin: ZapFast (edsuuu/zapfast)
+Label: ZapFast
+Suite: stable
+Architectures: amd64
+Date: Wed, 18 Nov 2026 20:06:00 +0000
+Description: ZapFast from the edsuuu/zapfast fork
+MD5Sum:
+ 80e3f7cae82641a6233ec997e187ef7f 999 Packages
+ 734bcfaa0ecffbeb4bba07d67b2e85bf 602 Packages.gz
+SHA1:
+ 097997c7b6c22a8dcaa503c2703e699d29cb9514 999 Packages
+ 6adafdaaec651190847b558063374fcfc1bcfcc9 602 Packages.gz
+SHA256:
+ 452718d7adad65cbfcd0644fd6b388ce38fefbf47e3fe12c6ebfdd908c1343a8 999 Packages
+ 82ebfd4568de84dc44f49595aa41f17438d365b5a0e608d82eb0b866cfbf104b 602 Packages.gz
+SHA512:
+ cf34d1922b8a985521e3623b1d652ed93d11c64b8d5a32e480dc00ff593bc650ee36ca7c6b96c7a81301b7f45bd6399f15e22289524303602569cce282c531b1 999 Packages
+ a82d419746f2f882b892f0507869e131b87f10febce9ec82087883b8391a352dd6a639e90e52cc611f654abce368ca3d0af37199a5a64986eee9c530b97ec94b 602 Packages.gz
+-----BEGIN PGP SIGNATURE-----
+
+iQIzBAEBCgAdFiEEO4uC0x9ExyfukDsOWYpzREj9IWkFAmr+BSgACgkQWYpzREj9
+IWn23xAAs6OyRWKxwgDAGn8v7IJSl02begXtN29Lna3224avVhoSqge9ubsGiKEk
+x4pr9jaZyAYjMB1CxJmCajSj/U2sxsMtFmdlx5kAgvtP72D1SipaEcSyTG4RL8c5
+OgDP3cbe8BSy5QhRdvm3/IvNy2vBsEj4VrvS7oTsgAPnQuEbcaznooyr3/Y0UOZQ
+bExdBszhQGHtSlsOcNltwu+5bAG3I9CIzrJ1T+Siv7GYA5c7tbpv/XEkRFtZa+Xx
+U5qdGN7p1SPICt+8R84TPMp+vI729zV5E4nL9NYqhXT5I3mPWrap6Ph/NvTb4sLx
+sWPWrGTIpYcdI/R15g3fEfm/0oAHcedlvgNPGGWBxD3NsVsin+5DfYyCXkH8yxB0
+HsDPqmVTeRVxDLYhsEwOiyWcJEawmkO7BiwX0c+SoNj5E8aM7zUt0wYi8S5+6iU9
+XDxrnFyqj0/08bDZ9U5F8RNUlig5MdW1maq0ed+w+8OAKo+oXN18V8NqOF1wTayU
+IvCkrbv0p/KNN5aWRhzZNX0XzfhIf22wxJOIULygk7XLWevf9c+egQkpF8pkEDwr
++mUSgukHxBfjZbMrmiM9ZBMRy8eIX7mdQbfOWp648Bhj37DMHwGsRY0s342/4PNv
+gZDQRy4mXglsywNZhGZIYlaL3FIP/heCWSo+ZDPb17dfjvU4nBM=
+=igra
+-----END PGP SIGNATURE-----

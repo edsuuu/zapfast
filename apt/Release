@@ -1,0 +1,18 @@
+Origin: ZapFast (edsuuu/zapfast)
+Label: ZapFast
+Suite: stable
+Architectures: amd64
+Date: Wed, 18 Nov 2026 20:06:00 +0000
+Description: ZapFast from the edsuuu/zapfast fork
+MD5Sum:
+ 80e3f7cae82641a6233ec997e187ef7f 999 Packages
+ 734bcfaa0ecffbeb4bba07d67b2e85bf 602 Packages.gz
+SHA1:
+ 097997c7b6c22a8dcaa503c2703e699d29cb9514 999 Packages
+ 6adafdaaec651190847b558063374fcfc1bcfcc9 602 Packages.gz
+SHA256:
+ 452718d7adad65cbfcd0644fd6b388ce38fefbf47e3fe12c6ebfdd908c1343a8 999 Packages
+ 82ebfd4568de84dc44f49595aa41f17438d365b5a0e608d82eb0b866cfbf104b 602 Packages.gz
+SHA512:
+ cf34d1922b8a985521e3623b1d652ed93d11c64b8d5a32e480dc00ff593bc650ee36ca7c6b96c7a81301b7f45bd6399f15e22289524303602569cce282c531b1 999 Packages
+ a82d419746f2f882b892f0507869e131b87f10febce9ec82087883b8391a352dd6a639e90e52cc611f654abce368ca3d0af37199a5a64986eee9c530b97ec94b 602 Packages.gz
