@@ -3318,6 +3318,21 @@ pub fn apply_flags(app: &mut App, page: Option<&str>) {
             "light" => {
                 app.settings.theme = ThemeChoice::Light;
             }
+            // The privacy blur over photos, names and messages.
+            "blur" => {
+                app.settings.privacy_blur = crate::settings::PrivacyBlur {
+                    photos: true,
+                    names: true,
+                    messages: true,
+                };
+            }
+            "blur-people" => {
+                app.settings.privacy_blur = crate::settings::PrivacyBlur {
+                    photos: true,
+                    names: true,
+                    messages: false,
+                };
+            }
             "messages" => {
                 app.settings.theme = ThemeChoice::Messages;
             }

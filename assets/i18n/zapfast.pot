@@ -3879,3 +3879,27 @@ msgstr ""
 #: src/ui/settings.rs
 msgid "Pop for mentions"
 msgstr ""
+
+#: src/ui/settings.rs
+msgid "Blur contact photos"
+msgstr ""
+
+#: src/ui/settings.rs
+msgid "Photos stay out of focus until the pointer rests on them."
+msgstr ""
+
+#: src/ui/settings.rs
+msgid "Blur names and numbers"
+msgstr ""
+
+#: src/ui/settings.rs
+msgid "In the chat list, the open chat's header and group messages."
+msgstr ""
+
+#: src/ui/settings.rs
+msgid "Blur messages"
+msgstr ""
+
+#: src/ui/settings.rs
+msgid "Message text, previews and media."
+msgstr ""

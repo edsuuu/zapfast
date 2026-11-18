@@ -410,6 +410,31 @@ pub enum NotificationSound {
     Custom(std::path::PathBuf),
 }
 
+/// What the privacy blur hides until the pointer rests on it, as WA Web
+/// Plus offers: contact and group photos, names and numbers, and message
+/// text, previews and media. All off by default.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct PrivacyBlur {
+    pub photos: bool,
+    pub names: bool,
+    pub messages: bool,
+}
+
+impl PrivacyBlur {
+    /// Nothing blurred.
+    pub const NONE: Self = Self {
+        photos: false,
+        names: false,
+        messages: false,
+    };
+
+    /// Whether anything is blurred.
+    pub fn any(self) -> bool {
+        self.photos || self.names || self.messages
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Settings {
@@ -511,6 +536,8 @@ pub struct Settings {
     pub proxy: String,
     /// Ask GitHub once a day whether a newer release exists.
     pub check_for_updates: bool,
+    /// The privacy blur (Settings > Privacy).
+    pub privacy_blur: PrivacyBlur,
     /// Download verified updates in the background; restarting remains explicit.
     pub download_updates_automatically: bool,
     /// Voice and audio playback speed multiplier.
@@ -595,6 +622,7 @@ impl Default for Settings {
             keep_chats_archived: true,
             proxy: String::new(),
             check_for_updates: true,
+            privacy_blur: PrivacyBlur::NONE,
             download_updates_automatically: false,
             save_contacts_to_phone: true,
             voice_speed: 1.0,

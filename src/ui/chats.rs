@@ -1547,13 +1547,22 @@ fn row(app: &mut App, ui: &mut egui::Ui, chat: &Chat) -> egui::Response {
         let avatar_rect =
             Rect::from_center_size(pos2(rect.left() + 38.0, rect.center().y), Vec2::splat(48.0));
         let picture = app.avatar(&chat.id);
-        widgets::paint_avatar(
+        // The privacy blur hides the row until the pointer rests on it.
+        super::blur::hiding(
             ui,
-            &palette,
-            avatar_rect,
-            &title,
-            &chat.id,
-            picture.as_deref(),
+            super::blur::photos(),
+            rect,
+            super::blur::PHOTO_RADIUS,
+            |ui| {
+                widgets::paint_avatar(
+                    ui,
+                    &palette,
+                    avatar_rect,
+                    &title,
+                    &chat.id,
+                    picture.as_deref(),
+                );
+            },
         );
         if chat.disappearing_timer().is_some() {
             widgets::paint_disappearing_badge(ui, &palette, avatar_rect);
@@ -1588,7 +1597,9 @@ fn row(app: &mut App, ui: &mut egui::Ui, chat: &Chat) -> egui::Response {
             theme::medium(16.0)
         };
         let name = widgets::line(ui, &title, name_font, palette.text, name_width, 1);
-        name.paint(ui, pos2(left, name_top), palette.text);
+        super::blur::hiding(ui, super::blur::names(), rect, super::blur::RADIUS, |ui| {
+            name.paint(ui, pos2(left, name_top), palette.text);
+        });
 
         // Leave room for badges beside the latest-message preview.
         let mut badge_right = right;
@@ -1624,6 +1635,9 @@ fn row(app: &mut App, ui: &mut egui::Ui, chat: &Chat) -> egui::Response {
             Icon::Pin.image(palette.dim, 14.0).paint_at(ui, icon_rect);
             badge_right -= 20.0;
         }
+        // A group's preview names who wrote or types, so names hide it too.
+        let preview_start = super::blur::mark(ui);
+        let hide_preview = super::blur::messages() || (super::blur::names() && chat.is_group());
         let mut x = left;
         let typing = app.typing_in(&chat.id);
         let preview_color = if unread && !muted {
@@ -1731,6 +1745,9 @@ fn row(app: &mut App, ui: &mut egui::Ui, chat: &Chat) -> egui::Response {
             widgets::line(ui, "", theme::regular(14.0), preview_color, 1.0, 1)
         };
         preview.paint(ui, pos2(x, line_y), preview_color);
+        if hide_preview {
+            super::blur::since(ui, preview_start, rect, super::blur::RADIUS);
+        }
     }
     let response = response.on_hover_cursor(egui::CursorIcon::PointingHand);
     if let Some((area, prefix, full)) = full_preview {
@@ -2047,13 +2064,21 @@ fn compact_row(app: &mut App, ui: &mut egui::Ui, chat: &Chat) -> egui::Response 
         }
         let avatar_rect = Rect::from_center_size(rect.center(), Vec2::splat(COMPACT_AVATAR));
         let picture = app.avatar(&chat.id);
-        widgets::paint_avatar(
+        super::blur::hiding(
             ui,
-            &palette,
-            avatar_rect,
-            &title,
-            &chat.id,
-            picture.as_deref(),
+            super::blur::photos(),
+            rect,
+            super::blur::PHOTO_RADIUS,
+            |ui| {
+                widgets::paint_avatar(
+                    ui,
+                    &palette,
+                    avatar_rect,
+                    &title,
+                    &chat.id,
+                    picture.as_deref(),
+                );
+            },
         );
         if chat.disappearing_timer().is_some() {
             widgets::paint_disappearing_badge(ui, &palette, avatar_rect);

@@ -511,6 +511,9 @@ fn header(app: &mut App, ui: &mut egui::Ui, chat: &Chat) -> Rect {
                             ),
                             Layout::left_to_right(Align::Center),
                             |ui| {
+                                // The privacy blur hides each part until the
+                                // pointer rests on it.
+                                let photo_start = super::blur::mark(ui);
                                 let avatar_response = widgets::avatar(
                                     ui,
                                     &palette,
@@ -520,6 +523,14 @@ fn header(app: &mut App, ui: &mut egui::Ui, chat: &Chat) -> Rect {
                                     picture.as_deref(),
                                 );
                                 avatar = avatar_response.rect;
+                                if super::blur::photos() {
+                                    super::blur::since(
+                                        ui,
+                                        photo_start,
+                                        avatar,
+                                        super::blur::PHOTO_RADIUS,
+                                    );
+                                }
                                 if chat.disappearing_timer().is_some() {
                                     widgets::paint_disappearing_badge(
                                         ui,
@@ -529,6 +540,7 @@ fn header(app: &mut App, ui: &mut egui::Ui, chat: &Chat) -> Rect {
                                 }
                                 // Room for the name's glass pill to clear the avatar.
                                 ui.add_space(if palette.vibrant() { 14.0 } else { 4.0 });
+                                let names_start = super::blur::mark(ui);
                                 ui.vertical(|ui| {
                                     let width = ui.available_width().max(80.0);
                                     ui.set_max_width(width);
@@ -612,6 +624,14 @@ fn header(app: &mut App, ui: &mut egui::Ui, chat: &Chat) -> Rect {
                                         );
                                     }
                                 });
+                                if super::blur::names() {
+                                    super::blur::since(
+                                        ui,
+                                        names_start,
+                                        text.expand(4.0),
+                                        super::blur::RADIUS,
+                                    );
+                                }
                             },
                         );
                     })
@@ -4500,6 +4520,7 @@ fn typing_bubble(ui: &mut egui::Ui, view: &View<'_>, typers: &[(String, String, 
             let step = SENDER_AVATAR * 0.6;
             let width = SENDER_AVATAR + step * (count.saturating_sub(1)) as f32;
             let (rect, _) = ui.allocate_exact_size(vec2(width, SENDER_AVATAR), Sense::hover());
+            let photo_start = super::blur::mark(ui);
             if ui.is_rect_visible(rect) {
                 for (index, (id, name, _)) in typers.iter().take(count).enumerate() {
                     let avatar = Rect::from_min_size(
@@ -4523,6 +4544,9 @@ fn typing_bubble(ui: &mut egui::Ui, view: &View<'_>, typers: &[(String, String, 
                         view.avatars.get(id).and_then(|picture| picture.as_deref()),
                     );
                 }
+            }
+            if super::blur::photos() {
+                super::blur::since(ui, photo_start, rect, super::blur::PHOTO_RADIUS);
             }
             ui.add_space(2.0);
         }
@@ -4997,15 +5021,23 @@ fn bubble(
                     }
                     if ui.is_rect_visible(rect) {
                         let name = (view.names_or)(&message.sender, message.sender_name.as_deref());
-                        widgets::paint_avatar(
+                        super::blur::hiding(
                             ui,
-                            &view.palette,
+                            super::blur::photos(),
                             rect,
-                            name.trim_start_matches('~'),
-                            &message.sender,
-                            view.avatars
-                                .get(&message.sender)
-                                .and_then(|picture| picture.as_deref()),
+                            super::blur::PHOTO_RADIUS,
+                            |ui| {
+                                widgets::paint_avatar(
+                                    ui,
+                                    &view.palette,
+                                    rect,
+                                    name.trim_start_matches('~'),
+                                    &message.sender,
+                                    view.avatars
+                                        .get(&message.sender)
+                                        .and_then(|picture| picture.as_deref()),
+                                );
+                            },
                         );
                     }
                 });
@@ -5616,6 +5648,9 @@ fn bubble_frame(
     let early = previous.map(|rect| ui.interact(rect, bubble_id, Sense::CLICK));
     // Painted once the contents are measured, beneath them.
     let backdrop = ui.painter().add(egui::Shape::Noop);
+    // Everything after the backdrop is the message, which the privacy blur
+    // may hide; the bubble itself stays sharp.
+    let content_start = super::blur::mark(ui);
     let tail = (tailed && fill != Color32::TRANSPARENT).then_some(if own {
         widgets::Side::Right
     } else {
@@ -5632,12 +5667,22 @@ fn bubble_frame(
             ui.spacing_mut().item_spacing.y = 4.0;
             if show_sender && view.chat.is_group() {
                 let name = (view.names_or)(&message.sender, message.sender_name.as_deref());
+                let name_start = super::blur::mark(ui);
                 let response = widgets::rich_text(
                     ui,
                     &name,
                     theme::semibold(13.0),
                     palette.sender(crate::util::hue(&message.sender)),
                 );
+                // A blurred message hides its sender's name with it.
+                if super::blur::names() && !super::blur::messages() {
+                    super::blur::since(
+                        ui,
+                        name_start,
+                        response.rect.expand(4.0),
+                        super::blur::RADIUS,
+                    );
+                }
                 let response = ui
                     .interact(
                         response.rect,
@@ -5751,6 +5796,9 @@ fn bubble_frame(
                 });
             }
         });
+    if super::blur::messages() {
+        super::blur::since(ui, content_start, inner.response.rect, super::blur::RADIUS);
+    }
     if fill != Color32::TRANSPARENT && ui.is_rect_visible(inner.response.rect) {
         ui.painter().set(
             backdrop,
@@ -6256,7 +6304,18 @@ fn quote_block(
                 |ui| {
                     ui.set_width(inner_width);
                     ui.spacing_mut().item_spacing.y = 1.0;
-                    widgets::rich_text(ui, &who, theme::semibold(12.5), colours.name);
+                    // Under the privacy blur the quoted name hides too, unless
+                    // it is yours or the whole message is already blurred.
+                    let name_start = super::blur::mark(ui);
+                    let name = widgets::rich_text(ui, &who, theme::semibold(12.5), colours.name);
+                    if super::blur::names() && !super::blur::messages() && !mine {
+                        super::blur::since(
+                            ui,
+                            name_start,
+                            name.rect.expand(4.0),
+                            super::blur::RADIUS,
+                        );
+                    }
                     widgets::rich_text(ui, &summary, theme::regular(12.5), colours.text);
                 },
             );

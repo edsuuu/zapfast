@@ -588,6 +588,29 @@ fn sections(app: &App) -> Vec<Section> {
         "",
         |settings| &mut settings.send_typing,
     );
+    // The privacy blur, as WA Web Plus has it: out of focus until the
+    // pointer rests on it.
+    privacy.toggle(
+        translated(locale, "Blur contact photos"),
+        translated(
+            locale,
+            "Photos stay out of focus until the pointer rests on them.",
+        ),
+        |settings| &mut settings.privacy_blur.photos,
+    );
+    privacy.toggle(
+        translated(locale, "Blur names and numbers"),
+        translated(
+            locale,
+            "In the chat list, the open chat's header and group messages.",
+        ),
+        |settings| &mut settings.privacy_blur.names,
+    );
+    privacy.toggle(
+        translated(locale, "Blur messages"),
+        translated(locale, "Message text, previews and media."),
+        |settings| &mut settings.privacy_blur.messages,
+    );
     app_lock_rows(app, &mut privacy);
     privacy.row(
         translated(locale, "Blocked contacts"),

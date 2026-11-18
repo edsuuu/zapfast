@@ -4131,3 +4131,27 @@ msgstr "Pop (estilo WhatsApp)"
 #: src/ui/settings.rs
 msgid "Pop for mentions"
 msgstr "Pop para menções"
+
+#: src/ui/settings.rs
+msgid "Blur contact photos"
+msgstr "Desfocar fotos dos contatos"
+
+#: src/ui/settings.rs
+msgid "Photos stay out of focus until the pointer rests on them."
+msgstr "As fotos ficam desfocadas até você passar o mouse sobre elas."
+
+#: src/ui/settings.rs
+msgid "Blur names and numbers"
+msgstr "Desfocar nomes e números"
+
+#: src/ui/settings.rs
+msgid "In the chat list, the open chat's header and group messages."
+msgstr "Na lista de conversas, no cabeçalho da conversa aberta e nas mensagens de grupo."
+
+#: src/ui/settings.rs
+msgid "Blur messages"
+msgstr "Desfocar mensagens"
+
+#: src/ui/settings.rs
+msgid "Message text, previews and media."
+msgstr "Texto das mensagens, prévias e mídia."

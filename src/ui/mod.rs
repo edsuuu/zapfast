@@ -3,6 +3,7 @@
 pub mod accounts;
 mod attachment_preview;
 mod blocking;
+pub mod blur;
 pub mod call;
 pub mod calls;
 mod chat_export;
@@ -42,6 +43,7 @@ use crate::theme::{self, Icon};
 pub fn show(app: &mut App, ui: &mut egui::Ui) {
     let ctx = ui.ctx().clone();
     let ctx = &ctx;
+    blur::set(app.settings.privacy_blur);
     track_keyboard_focus(ctx);
     info::release_thumbnails(app, ctx);
     picker::release_gif_animations(app, ctx);
