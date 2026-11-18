@@ -320,7 +320,13 @@ impl Account {
             .chats
             .iter()
             .filter(|chat| {
-                !chat.archived && !chat.locked && !chat.muted(now) && chat.looks_unread()
+                // Channels only post, and the official apps leave them out
+                // of the count too.
+                !chat.archived
+                    && !chat.locked
+                    && !chat.is_channel()
+                    && !chat.muted(now)
+                    && chat.looks_unread()
             })
             .count();
         u32::try_from(chats).unwrap_or(u32::MAX)

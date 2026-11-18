@@ -940,6 +940,7 @@ fastframe_icons::icons! {
         LockOpen => "lock-open",
         LogOut => lucide "log-out",
         MapPin => "map-pin",
+        Megaphone => "megaphone",
         Maximize => lucide "maximize-2",
         MessageCircle => "message-circle",
         Mic => lucide "mic",

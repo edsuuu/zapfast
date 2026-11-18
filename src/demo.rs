@@ -17989,12 +17989,15 @@ mod tests {
                 .map(|(_, node)| node)
                 .collect();
         }
-        let bells: Vec<_> = nodes
+        let mut bells: Vec<_> = nodes
             .iter()
             .filter(|node| node.label() == Some("Mute notifications"))
             .map(|node| node.toggled() == Some(egui::accesskit::Toggled::True))
             .collect();
-        assert_eq!(bells, [false, true], "one bell per account, the second on");
+        // The update lists nodes in no set order; which account's bell is on
+        // is checked through its row below.
+        bells.sort_unstable();
+        assert_eq!(bells, [false, true], "one bell per account, one of them on");
         // Only the muted account's row says so, not the one on screen.
         let said: Vec<_> = nodes
             .iter()
@@ -21741,8 +21744,10 @@ mod tests {
             .unwrap()
             .rect;
         assert!(locked.bottom() <= settings.top());
+        // Channels are in the rail, not a chip.
         let chips: Vec<_> = crate::model::ChatFilter::EVERY
             .into_iter()
+            .filter(|filter| *filter != crate::model::ChatFilter::Channels)
             .map(|filter| {
                 ctx.data(|data| {
                     data.get_temp::<egui::Rect>(crate::ui::chats::filter_chip_id(filter))
@@ -22821,6 +22826,7 @@ mod tests {
                 Stop::Messages,
                 Stop::Chats,
                 Stop::Calls,
+                Stop::Channels,
                 Stop::Starred,
                 Stop::Archived,
                 Stop::Locked,
@@ -22834,7 +22840,6 @@ mod tests {
                 Stop::Private,
                 Stop::Favorites,
                 Stop::Groups,
-                Stop::Channels,
             ];
             assert_eq!(
                 crate::ui::focus::stops(&ctx)
@@ -22886,7 +22891,7 @@ mod tests {
             assert!(ctx.read_response(row).unwrap().sense.is_focusable());
             for (modifiers, expected_stop) in [
                 (egui::Modifiers::NONE, Stop::Composer),
-                (egui::Modifiers::SHIFT, Stop::Channels),
+                (egui::Modifiers::SHIFT, Stop::Groups),
             ] {
                 ctx.memory_mut(|memory| memory.request_focus(row));
                 frame_sized(&mut app, &ctx, 780.0, vec![key(egui::Key::Tab, modifiers)]);
@@ -22938,6 +22943,7 @@ mod tests {
                         Stop::Messages,
                         Stop::Chats,
                         Stop::Calls,
+                        Stop::Channels,
                         Stop::Starred,
                         Stop::Archived,
                         Stop::Locked,
@@ -25834,6 +25840,7 @@ mod rail_tests {
                     let mut expected = vec![
                         Stop::Chats,
                         Stop::Calls,
+                        Stop::Channels,
                         Stop::Starred,
                         Stop::Archived,
                         Stop::Locked,

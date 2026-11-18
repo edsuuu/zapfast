@@ -1,5 +1,5 @@
 //! The navigation rail on the left of the chat list, as WhatsApp's desktop
-//! clients have it: Chats and Calls at the top; Starred, Archived and Locked
+//! clients have it: Chats, Calls and Channels at the top; Starred, Archived and Locked
 //! chats (while there are any), Settings and our own avatar (the account
 //! switcher) at the bottom. While the chat list is hidden, the chats'
 //! avatars fill the rail between the two, so every chat is still one click
@@ -9,7 +9,7 @@ use egui::{Frame, Margin, Rect, Sense, Vec2, vec2};
 
 use crate::app::App;
 use crate::i18n::gettext;
-use crate::model::{Action, Page};
+use crate::model::{Action, ChatFilter, Page};
 use crate::theme::{self, Icon, Palette};
 
 use super::focus::{Stop, TabStop};
@@ -64,6 +64,9 @@ pub fn lights_overhang(ctx: &egui::Context) -> f32 {
 pub enum Destination {
     Chats,
     Calls,
+    /// The followed channels, which only post: kept out of Chats, as the
+    /// official apps keep them under Updates.
+    Channels,
     Starred,
     Archived,
     Locked,
@@ -74,9 +77,12 @@ impl Destination {
     /// Whether the window shows this destination now: its icon is lit.
     pub fn lit(self, app: &App) -> bool {
         let chats = app.page == Page::Chats && !app.show_starred;
+        let list = chats && !app.show_archived && !app.locked_folder_open();
+        let channels = app.chat_filter == ChatFilter::Channels && app.label_filter.is_none();
         match self {
-            Self::Chats => chats && !app.show_archived && !app.locked_folder_open(),
+            Self::Chats => list && !channels,
             Self::Calls => app.page == Page::Calls,
+            Self::Channels => list && channels,
             Self::Starred => app.page == Page::Chats && app.show_starred,
             Self::Archived => chats && app.show_archived,
             Self::Locked => chats && app.locked_folder_open(),
@@ -106,14 +112,31 @@ impl Destination {
                 actions.push(Action::ToggleStarred);
             }
         };
+        let leave_folders = |actions: &mut Vec<Action>| {
+            if app.show_archived {
+                actions.push(Action::ShowArchived(false));
+            }
+            if app.locked_folder {
+                actions.push(Action::CloseLockedFolder);
+            }
+        };
         match self {
             Self::Chats => {
                 to_chats(&mut actions);
-                if app.show_archived {
-                    actions.push(Action::ShowArchived(false));
+                leave_folders(&mut actions);
+                if app.chat_filter == ChatFilter::Channels {
+                    actions.push(Action::SetChatFilter(ChatFilter::All));
                 }
-                if app.locked_folder {
-                    actions.push(Action::CloseLockedFolder);
+            }
+            Self::Channels => {
+                if !self.lit(app) {
+                    to_chats(&mut actions);
+                    leave_folders(&mut actions);
+                    // The channels are listed in the list column.
+                    if !app.sidebar_visible {
+                        actions.push(Action::ToggleSidebar);
+                    }
+                    actions.push(Action::SetChatFilter(ChatFilter::Channels));
                 }
             }
             Self::Calls => {
@@ -193,7 +216,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, hidden: bool) {
         .filter(|destination| destination.offered(app))
         .collect();
         let foot = bottom.len() as f32 * (PLATE + GAP) + GAP + AVATAR + GAP;
-        let minimum = 2.0 * CELL
+        let minimum = 3.0 * CELL
             + foot
             + if hidden {
                 CELL + GAP + MIN_AVATARS
@@ -210,7 +233,11 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, hidden: bool) {
                 // the content keeps its minimum height and scrolls instead
                 // of leaving the bottom buttons beyond the window.
                 ui.set_height(height);
-                for destination in [Destination::Chats, Destination::Calls] {
+                for destination in [
+                    Destination::Chats,
+                    Destination::Calls,
+                    Destination::Channels,
+                ] {
                     destination_button(app, ui, &palette, destination, CELL);
                 }
                 if hidden {
@@ -309,6 +336,15 @@ fn destination_button(
                 super::keys::label("Ctrl+Shift+2")
             ),
         ),
+        Destination::Channels => {
+            // Channels that posted since we last looked, as the chip counted.
+            badge = app.unread_chats(ChatFilter::Channels) as u32;
+            (
+                Icon::Megaphone,
+                Stop::Channels,
+                gettext(app.locale, "Channels").into_owned(),
+            )
+        }
         Destination::Starred => (
             Icon::Star,
             Stop::Starred,
@@ -388,10 +424,36 @@ fn destination_button(
         }
     }
     let response = response.on_hover_text(label).tab_stop(stop);
+    if destination == Destination::Channels {
+        channels_menu(app, &response, palette);
+    }
     if response.clicked() {
         let actions = destination.actions(app);
         app.actions.extend(actions);
     }
+}
+
+/// Mutes or unmutes every channel at once, from the Channels button's
+/// context menu, as the Channels chip offered it.
+fn channels_menu(app: &mut App, response: &egui::Response, palette: &Palette) {
+    let now = crate::util::now();
+    let all_muted = app
+        .chats
+        .iter()
+        .filter(|chat| chat.is_channel())
+        .all(|chat| chat.muted(now));
+    let palette = *palette;
+    response.context_menu(|ui| {
+        let (icon, label) = if all_muted {
+            (Icon::Bell, "Unmute all channels")
+        } else {
+            (Icon::BellOff, "Mute all channels")
+        };
+        if widgets::menu_item(ui, &palette, Some(icon), label) {
+            app.actions.push(Action::MuteAllChannels(!all_muted));
+            ui.close();
+        }
+    });
 }
 
 #[cfg(test)]
@@ -415,6 +477,7 @@ mod tests {
             [
                 Destination::Chats,
                 Destination::Calls,
+                Destination::Channels,
                 Destination::Starred,
                 Destination::Archived,
                 Destination::Locked,
@@ -425,6 +488,9 @@ mod tests {
             .collect::<Vec<_>>()
         };
         assert_eq!(lit(&app), [Destination::Chats]);
+        app.chat_filter = crate::model::ChatFilter::Channels;
+        assert_eq!(lit(&app), [Destination::Channels]);
+        app.chat_filter = crate::model::ChatFilter::All;
         app.show_archived = true;
         assert_eq!(lit(&app), [Destination::Archived]);
         app.show_archived = false;
@@ -486,5 +552,34 @@ mod tests {
             Destination::Chats.actions(&app).as_slice(),
             [Action::ShowArchived(false)]
         ));
+    }
+
+    /// Channels list in the list column, under a button of their own, and
+    /// Chats returns to every other chat; channels never count toward the
+    /// taskbar's unread chats.
+    #[test]
+    fn channels_have_their_own_place_and_stay_out_of_the_count() {
+        let (_root, mut app) = app();
+        app.sidebar_visible = false;
+        assert!(matches!(
+            Destination::Channels.actions(&app).as_slice(),
+            [
+                Action::ToggleSidebar,
+                Action::SetChatFilter(ChatFilter::Channels)
+            ]
+        ));
+        app.sidebar_visible = true;
+        app.chat_filter = ChatFilter::Channels;
+        assert!(Destination::Channels.actions(&app).is_empty());
+        assert!(matches!(
+            Destination::Chats.actions(&app).as_slice(),
+            [Action::SetChatFilter(ChatFilter::All)]
+        ));
+        let mut channel = crate::model::Chat::new("1@newsletter".into(), "News".into());
+        channel.unread = 3;
+        channel.last_activity = 1;
+        app.chats.push(channel);
+        assert_eq!(app.unread_chat_count(), 0);
+        assert_eq!(app.unread_chats(ChatFilter::Channels), 1);
     }
 }

@@ -226,7 +226,7 @@ fn header(app: &mut App, ui: &mut egui::Ui) {
                         // rail beside the list.
                         header_title(
                             ui,
-                            &crate::i18n::gettext(app.locale, tab_title(&app.page)),
+                            &crate::i18n::gettext(app.locale, tab_title(app)),
                             theme::bold(20.0),
                             palette.text,
                             buttons_width,
@@ -247,9 +247,11 @@ fn header(app: &mut App, ui: &mut egui::Ui) {
 }
 
 /// The header's title beside our avatar: the tab the list shows.
-fn tab_title(page: &Page) -> &'static str {
-    if *page == Page::Calls {
+fn tab_title(app: &App) -> &'static str {
+    if app.page == Page::Calls {
         "Calls"
+    } else if super::rail::Destination::Channels.lit(app) {
+        "Channels"
     } else {
         "Chats"
     }
@@ -561,7 +563,7 @@ fn macos_header(app: &mut App, ui: &mut egui::Ui) {
                     // under the traffic lights.
                     header_title(
                         ui,
-                        &crate::i18n::gettext(app.locale, tab_title(&app.page)),
+                        &crate::i18n::gettext(app.locale, tab_title(app)),
                         theme::bold(20.0),
                         palette.text,
                         header_buttons_width(ui, &buttons),
@@ -606,7 +608,11 @@ fn filter_chips(app: &mut App, ui: &mut egui::Ui) {
     let output = widgets::chip_scroll_row(ui, "chat-filters", |ui| {
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing = vec2(4.0, 6.0);
-            for filter in ChatFilter::EVERY {
+            // Channels have a place of their own in the rail.
+            for filter in ChatFilter::EVERY
+                .into_iter()
+                .filter(|filter| *filter != ChatFilter::Channels)
+            {
                 let count = match filter {
                     ChatFilter::All => 0,
                     _ => app.unread_chats(filter),
@@ -633,28 +639,6 @@ fn filter_chips(app: &mut App, ui: &mut egui::Ui) {
                 // Store the chip rect for interaction tests.
                 ui.ctx()
                     .data_mut(|data| data.insert_temp(filter_chip_id(filter), chip.rect));
-                let chip = if filter == ChatFilter::Channels {
-                    let now = crate::util::now();
-                    let all_muted = app
-                        .chats
-                        .iter()
-                        .filter(|chat| chat.is_channel())
-                        .all(|chat| chat.muted(now));
-                    chip.context_menu(|ui| {
-                        let (icon, label) = if all_muted {
-                            (Icon::Bell, "Unmute all channels")
-                        } else {
-                            (Icon::BellOff, "Mute all channels")
-                        };
-                        if widgets::menu_item(ui, &palette, Some(icon), label) {
-                            app.actions.push(Action::MuteAllChannels(!all_muted));
-                            ui.close();
-                        }
-                    });
-                    chip
-                } else {
-                    chip
-                };
                 if chip.clicked() {
                     // A second click on the active chip returns to every chat.
                     let next = if selected { ChatFilter::All } else { filter };
