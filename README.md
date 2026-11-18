@@ -27,7 +27,7 @@
 > desfoque de privacidade de fotos, nomes e mensagens, canais num lugar
 > próprio, som de notificação no estilo do WhatsApp, fonte e contraste do
 > WhatsApp Web atual e um balão de "digitando" do tamanho certo. Instale e
-> atualize pelo apt: [packaging/deb/README.md](packaging/deb/README.md).
+> atualize pelo apt: veja [Instalar este fork](#instalar-este-fork-debian-ubuntu-e-derivados).
 
 ZapFast is a WhatsApp client written in Rust with
 [egui](https://www.egui.rs) and [fastframe](https://fastframe.dev), the
@@ -69,6 +69,36 @@ https://github.com/user-attachments/assets/2bf86b54-45fc-4add-8de7-c426c3cdad9b
 | **Privacy** | Hide locked chats behind a code, or the whole window behind an app lock. Nothing goes to a server of ours. |
 
 ## Install
+
+### Instalar este fork (Debian, Ubuntu e derivados)
+
+O repositório apt deste fork entrega o ZapFast com tudo o que está na nota
+acima. Ele instala por cima do `.deb` oficial e, daí em diante, as atualizações
+vêm deste fork:
+
+```bash
+curl -fsSL https://edsuuu.github.io/zapfast/apt/zapfast.gpg | sudo tee /usr/share/keyrings/zapfast.gpg > /dev/null
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/zapfast.gpg] https://edsuuu.github.io/zapfast/apt ./" \
+  | sudo tee /etc/apt/sources.list.d/zapfast.list
+sudo apt update && sudo apt install zapfast
+```
+
+- **Atualizar:** `sudo apt update && sudo apt upgrade`. O ZapFast avisa quando
+  sai uma versão nova [nas releases deste fork](https://github.com/edsuuu/zapfast/releases)
+  e deixa a instalação para o apt.
+- **Sem o repositório:** baixe o `zapfast_<versão>_amd64.deb` da
+  [última release](https://github.com/edsuuu/zapfast/releases/latest) e rode
+  `sudo apt install ./zapfast_<versão>_amd64.deb`.
+- **Remover:** `sudo apt remove zapfast`. Suas conversas e a sessão do
+  WhatsApp ficam na sua pasta de usuário.
+- **Requisitos:** Debian 12+, Ubuntu 23.04+ ou derivados (glibc 2.36), amd64.
+
+Para publicar uma versão nova, veja [packaging/deb/README.md](packaging/deb/README.md).
+
+### Upstream
+
+As opções abaixo instalam o ZapFast do upstream (crmne/zapfast), sem os
+recursos deste fork.
 
 | Platform | Installation |
 |---|---|
