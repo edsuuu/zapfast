@@ -4527,26 +4527,40 @@ fn typing_bubble(ui: &mut egui::Ui, view: &View<'_>, typers: &[(String, String, 
             ui.add_space(2.0);
         }
         let backdrop = ui.painter().add(egui::Shape::Noop);
-        let rect = Frame::new()
-            .inner_margin(Margin::symmetric(12, 9))
-            .show(ui, |ui| {
-                let recording = typers
-                    .iter()
-                    .any(|(_, _, activity)| *activity == ChatActivity::RecordingAudio);
-                let typing = typers
-                    .iter()
-                    .any(|(_, _, activity)| *activity == ChatActivity::Typing);
-                ui.horizontal(|ui| {
-                    if recording {
-                        theme::icon(ui, Icon::Mic, 18.0, palette.secondary);
-                    }
-                    if typing {
-                        typing_dots(ui, &palette);
-                    }
-                });
-            })
-            .response
-            .rect;
+        let recording = typers
+            .iter()
+            .any(|(_, _, activity)| *activity == ChatActivity::RecordingAudio);
+        let typing = typers
+            .iter()
+            .any(|(_, _, activity)| *activity == ChatActivity::Typing);
+        // Laid out at its own size, never in a row of its own: a row is at
+        // least `interact_size` high, which made the bubble twice as tall as
+        // a one-line message around dots a few points high.
+        let icon = if recording { TYPING_ICON } else { 0.0 };
+        let gap = if recording && typing { 6.0 } else { 0.0 };
+        let dots = if typing { TYPING_DOTS.x } else { 0.0 };
+        let content = vec2(icon + gap + dots, TYPING_BUBBLE_CONTENT);
+        let (rect, _) =
+            ui.allocate_exact_size(content + TYPING_BUBBLE_PADDING * 2.0, Sense::hover());
+        if ui.is_rect_visible(rect) {
+            let inner = rect.shrink2(TYPING_BUBBLE_PADDING);
+            if recording {
+                let icon_rect = Rect::from_center_size(
+                    pos2(inner.left() + icon / 2.0, inner.center().y),
+                    Vec2::splat(icon),
+                );
+                Icon::Mic
+                    .image(palette.secondary, icon)
+                    .paint_at(ui, icon_rect);
+            }
+            if typing {
+                let dots_rect = Rect::from_center_size(
+                    pos2(inner.right() - dots / 2.0, inner.center().y),
+                    TYPING_DOTS,
+                );
+                paint_typing_dots(ui, &palette, dots_rect);
+            }
+        }
         ui.painter().set(
             backdrop,
             widgets::bubble_shape(
@@ -4561,14 +4575,32 @@ fn typing_bubble(ui: &mut egui::Ui, view: &View<'_>, typers: &[(String, String, 
     });
 }
 
+/// The typing dots' radius, the space between two, and how far one rises.
+const TYPING_DOT_RADIUS: f32 = 3.0;
+const TYPING_DOT_GAP: f32 = 4.0;
+const TYPING_DOT_LIFT: f32 = 3.0;
+/// The three dots and the room they rise in.
+const TYPING_DOTS: Vec2 = vec2(
+    TYPING_DOT_RADIUS * 6.0 + TYPING_DOT_GAP * 2.0,
+    TYPING_DOT_RADIUS * 2.0 + TYPING_DOT_LIFT,
+);
+/// The microphone shown while someone records a voice message.
+const TYPING_ICON: f32 = 16.0;
+/// The bubble's content height and padding: as tall as a one-line message.
+const TYPING_BUBBLE_CONTENT: f32 = 16.0;
+const TYPING_BUBBLE_PADDING: Vec2 = vec2(11.0, 6.0);
+
+/// The dots on their own, as the tests lay them out.
+#[cfg(test)]
 fn typing_dots(ui: &mut egui::Ui, palette: &Palette) {
-    let radius = 3.0;
-    let gap = 5.0;
-    let lift = 3.0;
-    let (rect, _) = ui.allocate_exact_size(
-        vec2(radius * 6.0 + gap * 2.0, radius * 2.0 + lift),
-        Sense::hover(),
-    );
+    let (rect, _) = ui.allocate_exact_size(TYPING_DOTS, Sense::hover());
+    paint_typing_dots(ui, palette, rect);
+}
+
+fn paint_typing_dots(ui: &egui::Ui, palette: &Palette, rect: Rect) {
+    let radius = TYPING_DOT_RADIUS;
+    let gap = TYPING_DOT_GAP;
+    let lift = TYPING_DOT_LIFT;
     if !ui.is_rect_visible(rect) {
         return;
     }
