@@ -26,8 +26,11 @@ pub const CONFIG: UpdateConfig = UpdateConfig {
     // The next release key, backed up outside GitHub. Releases stay signed
     // with the current key until installs trust this one too.
     additional_publisher_keys: &[include_str!("../assets/update-public-key-next.hex")],
+    // This fork publishes its own releases: a copy built from it looks for
+    // updates there, not upstream. DEB installs only hear about a release
+    // here; apt installs it from the fork's repository.
     ..UpdateConfig::new(
-        "crmne/zapfast",
+        "edsuuu/zapfast",
         "ZapFast",
         "zapfast",
         env!("CARGO_PKG_VERSION"),
@@ -52,6 +55,15 @@ mod tests {
         CONFIG.validate().unwrap();
         assert_eq!(CONFIG.current_version, env!("CARGO_PKG_VERSION"));
         assert_eq!(CONFIG.slug, "zapfast");
+    }
+
+    #[test]
+    fn updates_come_from_this_fork() {
+        assert_eq!(CONFIG.repository, "edsuuu/zapfast");
+        assert_eq!(
+            env!("CARGO_PKG_REPOSITORY"),
+            "https://github.com/edsuuu/zapfast"
+        );
     }
 
     #[test]
