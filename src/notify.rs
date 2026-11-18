@@ -310,6 +310,9 @@ impl Notifications {
     }
 }
 
+/// ZapFast's pops (`scripts/generate-pop-sounds.py`, MIT).
+const POP: &[u8] = include_bytes!("../assets/sounds/pop.wav");
+const POP_MENTION: &[u8] = include_bytes!("../assets/sounds/pop-mention.wav");
 /// Pidgin's message and alert sounds (GPL-2.0, see `assets/sounds/README.md`).
 const RECEIVE: &[u8] = include_bytes!("../assets/sounds/receive.wav");
 const ALERT: &[u8] = include_bytes!("../assets/sounds/alert.wav");
@@ -320,6 +323,8 @@ const ALERT: &[u8] = include_bytes!("../assets/sounds/alert.wav");
 /// sounds go with it when the application bundle carries them.
 fn sound_file(sound: &NotificationSound) -> Option<&'static str> {
     match sound {
+        NotificationSound::Pop => Some("zapfast-pop.wav"),
+        NotificationSound::PopMention => Some("zapfast-pop-mention.wav"),
         NotificationSound::Receive => Some("zapfast-receive.wav"),
         NotificationSound::Alert => Some("zapfast-alert.wav"),
         _ => None,
@@ -347,6 +352,10 @@ fn native_sound(sound: &NotificationSound) -> fastframe_notifications::Sound {
 /// their preview in Settings. System sounds and silence play nothing here.
 pub fn play_sound(sound: NotificationSound) {
     let source: Box<dyn Fn() -> std::io::Result<Box<dyn ReadSeek>> + Send> = match sound {
+        NotificationSound::Pop => Box::new(|| Ok(Box::new(std::io::Cursor::new(POP)))),
+        NotificationSound::PopMention => {
+            Box::new(|| Ok(Box::new(std::io::Cursor::new(POP_MENTION))))
+        }
         NotificationSound::Receive => Box::new(|| Ok(Box::new(std::io::Cursor::new(RECEIVE)))),
         NotificationSound::Alert => Box::new(|| Ok(Box::new(std::io::Cursor::new(ALERT)))),
         NotificationSound::Custom(path) => Box::new(move || {
@@ -582,7 +591,12 @@ mod tests {
     #[test]
     fn the_bundle_script_ships_every_built_in_sound() {
         let script = include_str!("../packaging/macos/bundle.sh");
-        for sound in [NotificationSound::Receive, NotificationSound::Alert] {
+        for sound in [
+            NotificationSound::Pop,
+            NotificationSound::PopMention,
+            NotificationSound::Receive,
+            NotificationSound::Alert,
+        ] {
             assert!(script.contains(sound_file(&sound).expect("bundled sound")));
         }
         assert_eq!(

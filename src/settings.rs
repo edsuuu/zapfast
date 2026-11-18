@@ -389,11 +389,17 @@ impl NotificationLimit {
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum NotificationSound {
-    /// Pidgin's message sound, the default for new messages.
+    /// ZapFast's two-note bubble pop, in the style of WhatsApp's own tone:
+    /// the default for new messages.
     #[default]
+    Pop,
+    /// The pop with a third, higher note: the default for mentions and
+    /// replies to us.
+    PopMention,
+    /// Pidgin's message sound.
     #[serde(alias = "chime")]
     Receive,
-    /// Pidgin's alert sound, the default for mentions and replies to us.
+    /// Pidgin's alert sound.
     #[serde(alias = "ripple")]
     Alert,
     /// Whatever the operating system plays for notifications.
@@ -582,8 +588,8 @@ impl Default for Settings {
             keep_running_in_background: true,
             notifications: true,
             notification_content: true,
-            message_sound: NotificationSound::Receive,
-            mention_sound: NotificationSound::Alert,
+            message_sound: NotificationSound::Pop,
+            mention_sound: NotificationSound::PopMention,
             group_sounds: true,
             download_folder: None,
             keep_chats_archived: true,
@@ -1022,7 +1028,7 @@ mod tests {
         let settings: Settings =
             serde_json::from_str(r#"{"message_sound":"system","group_sound":"none"}"#).unwrap();
         assert_eq!(settings.message_sound, NotificationSound::System);
-        assert_eq!(settings.mention_sound, NotificationSound::Alert);
+        assert_eq!(settings.mention_sound, NotificationSound::PopMention);
         assert!(settings.group_sounds);
     }
 

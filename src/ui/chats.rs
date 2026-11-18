@@ -2295,8 +2295,16 @@ fn sound_menu(app: &mut App, ui: &mut egui::Ui, palette: &Palette, chat: &Chat) 
     let default_label = crate::i18n::gettext(locale, "Default");
     let system_label = crate::i18n::gettext(locale, "System sound");
     let none_label = crate::i18n::gettext(locale, "No sound");
-    let sounds: [(Option<NotificationSound>, std::borrow::Cow<'static, str>); 5] = [
+    let sounds: [(Option<NotificationSound>, std::borrow::Cow<'static, str>); 7] = [
         (None, default_label),
+        (
+            Some(NotificationSound::Pop),
+            crate::i18n::gettext(locale, "Pop (WhatsApp style)"),
+        ),
+        (
+            Some(NotificationSound::PopMention),
+            crate::i18n::gettext(locale, "Pop for mentions"),
+        ),
         (Some(NotificationSound::Receive), "Pidgin".into()),
         (Some(NotificationSound::Alert), "Pidgin alert".into()),
         (Some(NotificationSound::System), system_label),

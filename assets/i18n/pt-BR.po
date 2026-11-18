@@ -4123,3 +4123,11 @@ msgstr "Enter envia"
 
 #~ msgid "Next pinned message"
 #~ msgstr "Próxima mensagem fixada"
+
+#: src/ui/settings.rs
+msgid "Pop (WhatsApp style)"
+msgstr "Pop (estilo WhatsApp)"
+
+#: src/ui/settings.rs
+msgid "Pop for mentions"
+msgstr "Pop para menções"

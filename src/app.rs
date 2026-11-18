@@ -19459,7 +19459,7 @@ mod tests {
             &ctx,
         );
         assert_eq!(app.settings.mention_sound, NotificationSound::None);
-        assert_eq!(app.settings.message_sound, NotificationSound::Receive);
+        assert_eq!(app.settings.message_sound, NotificationSound::Pop);
     }
 
     /// Checks that incoming group mentions and quotes identify us across phone and privacy ids.
@@ -19528,24 +19528,24 @@ mod tests {
         let sound = |settings: &Settings, chat, group, for_us| {
             notification_sound(settings, chat, group, for_us)
         };
-        // Pidgin's model: the message sound everywhere, the alert when
-        // someone addresses us in a group.
+        // The message pop everywhere, the mention pop when someone
+        // addresses us in a group.
+        assert_eq!(sound(&settings, None, false, false), NotificationSound::Pop);
+        assert_eq!(sound(&settings, None, true, false), NotificationSound::Pop);
         assert_eq!(
-            sound(&settings, None, false, false),
-            NotificationSound::Receive
+            sound(&settings, None, true, true),
+            NotificationSound::PopMention
         );
-        assert_eq!(
-            sound(&settings, None, true, false),
-            NotificationSound::Receive
-        );
-        assert_eq!(sound(&settings, None, true, true), NotificationSound::Alert);
 
         settings.group_sounds = false;
         assert_eq!(sound(&settings, None, true, false), NotificationSound::None);
-        assert_eq!(sound(&settings, None, true, true), NotificationSound::Alert);
+        assert_eq!(
+            sound(&settings, None, true, true),
+            NotificationSound::PopMention
+        );
         assert_eq!(
             sound(&settings, None, false, false),
-            NotificationSound::Receive,
+            NotificationSound::Pop,
             "one-to-one chats are not groups"
         );
 

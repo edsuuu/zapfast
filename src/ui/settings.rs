@@ -1974,6 +1974,14 @@ fn sound_control(ui: &mut egui::Ui, app: &mut App, mention: bool) {
         app.settings.message_sound.clone()
     };
     let choices = [
+        (
+            NotificationSound::Pop,
+            gettext(locale, "Pop (WhatsApp style)"),
+        ),
+        (
+            NotificationSound::PopMention,
+            gettext(locale, "Pop for mentions"),
+        ),
         (NotificationSound::Receive, "Pidgin".into()),
         (NotificationSound::Alert, gettext(locale, "Pidgin alert")),
         (NotificationSound::System, gettext(locale, "System default")),

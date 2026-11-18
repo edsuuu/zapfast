@@ -42,6 +42,8 @@ iconutil -c icns "$iconset" -o "$app/Contents/Resources/zapfast.icns"
 # The notification plays ZapFast's built-in sounds from the bundle by name, so
 # Do Not Disturb and Focus silence them (src/notify/macos.rs).
 sounds="$here/../../assets/sounds"
+cp "$sounds/pop.wav" "$app/Contents/Resources/zapfast-pop.wav"
+cp "$sounds/pop-mention.wav" "$app/Contents/Resources/zapfast-pop-mention.wav"
 cp "$sounds/receive.wav" "$app/Contents/Resources/zapfast-receive.wav"
 cp "$sounds/alert.wav" "$app/Contents/Resources/zapfast-alert.wav"
 

@@ -3871,3 +3871,11 @@ msgstr ""
 #: src/a11y.rs:362
 msgid "not sent"
 msgstr ""
+
+#: src/ui/settings.rs
+msgid "Pop (WhatsApp style)"
+msgstr ""
+
+#: src/ui/settings.rs
+msgid "Pop for mentions"
+msgstr ""
