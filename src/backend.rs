@@ -162,6 +162,9 @@ pub struct SendTurn {
 
 #[derive(Debug)]
 pub enum Command {
+    /// A request from a local agent (see [`crate::automation`]), answered
+    /// on the channel it carries.
+    Automation(crate::automation::WorkerRequest),
     FetchBlocklist,
     SetBlocked {
         chat: ChatId,

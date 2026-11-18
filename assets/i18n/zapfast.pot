@@ -3903,3 +3903,15 @@ msgstr ""
 #: src/ui/settings.rs
 msgid "Message text, previews and media."
 msgstr ""
+
+#: src/ui/settings.rs
+msgid "Agent access (MCP)"
+msgstr ""
+
+#: src/ui/settings.rs
+msgid "Lets an agent on this computer, such as Claude Code through `zapfast mcp`, list your chats, read them and send messages as you. WhatsApp may ban accounts that automate messages."
+msgstr ""
+
+#: src/ui/settings.rs
+msgid "Could not start agent access"
+msgstr ""

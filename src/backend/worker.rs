@@ -7393,7 +7393,10 @@ impl Worker {
                 quoting,
                 mentions,
                 preview,
-            } => self.send_text(chat, text, quoting, mentions, preview),
+            } => {
+                self.send_text(chat, text, quoting, mentions, preview);
+            }
+            Command::Automation(request) => self.automation(request),
             Command::FetchLinkPreview { url } => self.fetch_link_preview(url),
             Command::SendLocation {
                 chat,
@@ -9646,6 +9649,8 @@ impl Worker {
     }
 
     /// Dispatches composed text with its explicit quote target and restores it on refusal.
+    /// Sends text, keeping the row locally first. Returns the new message's
+    /// id, or `None` when the text was handed back unsent.
     fn send_text(
         &mut self,
         chat: ChatId,
@@ -9653,18 +9658,18 @@ impl Worker {
         quoting: Option<crate::model::ReplyTarget>,
         mentions: Vec<String>,
         preview: Option<crate::model::ComposedPreview>,
-    ) {
+    ) -> Option<String> {
         let (context, shown) = match self.quote_target(&chat, quoting.as_ref()) {
             Ok(Some((context, shown))) => (Some(context), Some(shown)),
             Ok(None) => (None, None),
             Err(reason) => {
                 self.refuse(chat, quoting, Unsent::Text(text), reason);
-                return;
+                return None;
             }
         };
         let (Some(client), Some(jid)) = (self.connected_client(), Self::jid_of(&chat)) else {
             self.refuse(chat, quoting, Unsent::Text(text), Refusal::Offline);
-            return;
+            return None;
         };
         let mut mentions = mentions;
         if self.wants_mention_all(&chat, &text) {
@@ -9700,11 +9705,112 @@ impl Worker {
             self.commands.clone(),
             chat,
             jid,
-            id,
+            id.clone(),
             message,
             expiration,
             None,
         ));
+        Some(id)
+    }
+
+    /// Answers a local agent (see [`crate::automation`]): reads a chat from
+    /// the archive, or sends text, first asking WhatsApp which number an
+    /// account is under when the agent named a number. Nothing read or sent
+    /// is logged.
+    fn automation(&mut self, request: crate::automation::WorkerRequest) {
+        use crate::automation::{Recipient, WorkerRequest};
+        match request {
+            WorkerRequest::Read { chat, limit, reply } => {
+                let answer = self
+                    .archive
+                    .messages(&chat, None, limit)
+                    // The archive gives the latest page oldest first.
+                    .map(|rows| {
+                        let messages: Vec<_> =
+                            rows.iter().map(crate::automation::message_json).collect();
+                        serde_json::json!({ "chat": chat, "messages": messages })
+                    })
+                    .map_err(|_| "Could not read the chat".to_owned());
+                let _ = reply.send(answer);
+            }
+            WorkerRequest::Send {
+                to: Recipient::Chat(chat),
+                text,
+                reply,
+            } => {
+                if self.connected_client().is_none() {
+                    let _ = reply.send(Err("ZapFast is not connected to WhatsApp".to_owned()));
+                    return;
+                }
+                if self
+                    .archive
+                    .chat(&chat)
+                    .ok()
+                    .flatten()
+                    .is_some_and(|chat| chat.locked)
+                {
+                    let _ = reply.send(Err("That chat is locked".to_owned()));
+                    return;
+                }
+                let sent = self.send_text(chat.clone(), text, None, Vec::new(), None);
+                let _ = reply.send(
+                    sent.map(|id| serde_json::json!({ "chat": chat, "id": id }))
+                        .ok_or_else(|| "WhatsApp did not take the message".to_owned()),
+                );
+            }
+            WorkerRequest::Send {
+                to: Recipient::Phone(phone),
+                text,
+                reply,
+            } => {
+                let Some(client) = self.connected_client() else {
+                    let _ = reply.send(Err("ZapFast is not connected to WhatsApp".to_owned()));
+                    return;
+                };
+                let commands = self.commands.clone();
+                let jid = Jid::pn(&phone);
+                tokio::spawn(async move {
+                    // As a new chat does: the account may be under another
+                    // form of the number, such as a Brazilian mobile
+                    // without its ninth digit.
+                    let registered =
+                        client
+                            .contacts()
+                            .is_on_whatsapp(&[jid])
+                            .await
+                            .map(|results| {
+                                results
+                                    .iter()
+                                    .find(|result| result.is_registered)
+                                    .map(|result| {
+                                        registered_number(
+                                            &phone,
+                                            &result.jid,
+                                            result.pn_jid.as_ref(),
+                                        )
+                                    })
+                            });
+                    let number = match registered {
+                        Ok(Some(number)) => number,
+                        Ok(None) => {
+                            let _ = reply.send(Err("This number is not on WhatsApp".to_owned()));
+                            return;
+                        }
+                        Err(_) => {
+                            let _ = reply.send(Err(
+                                "Could not check the number. Please try again.".to_owned(),
+                            ));
+                            return;
+                        }
+                    };
+                    let _ = commands.send(Command::Automation(WorkerRequest::Send {
+                        to: Recipient::Chat(format!("{number}@s.whatsapp.net")),
+                        text,
+                        reply,
+                    }));
+                });
+            }
+        }
     }
 
     /// Builds the outgoing body, its stored content and thumbnail. A preview
@@ -15074,6 +15180,59 @@ mod tests {
         assert_eq!(
             registered_number("15550000001", &pn("15550000001"), None),
             "15550000001"
+        );
+    }
+
+    /// An agent reads the latest messages oldest first, and is told when
+    /// there is no connection to send with, rather than the text going back
+    /// to the composer.
+    #[tokio::test]
+    async fn agents_read_the_latest_messages_and_learn_when_offline() {
+        use crate::automation::{Recipient, WorkerRequest};
+        let (mut worker, events, _, _) = super::receipt_tests::worker();
+        const PEER: &str = "fixture@s.whatsapp.net";
+        worker.archive.ensure_chat(PEER, "Fixture").unwrap();
+        for (id, timestamp, from_me) in [("a", 100, true), ("b", 200, false), ("c", 300, false)] {
+            let row = Message {
+                chat: PEER.into(),
+                from_me,
+                content: Content::text(id),
+                ..super::receipt_tests::own_message(id, timestamp)
+            };
+            worker.archive.insert_message(&row, None).unwrap();
+        }
+        let (reply, answer) = std::sync::mpsc::channel();
+        worker
+            .handle_command(Command::Automation(WorkerRequest::Read {
+                chat: PEER.into(),
+                limit: 2,
+                reply,
+            }))
+            .await;
+        let read = answer.try_recv().unwrap().unwrap();
+        let messages = read["messages"].as_array().unwrap();
+        let ids: Vec<_> = messages.iter().map(|m| m["id"].as_str().unwrap()).collect();
+        assert_eq!(ids, ["b", "c"]);
+        assert_eq!(messages[1]["text"], "c");
+        assert_eq!(messages[1]["from_me"], false);
+
+        let (reply, answer) = std::sync::mpsc::channel();
+        worker
+            .handle_command(Command::Automation(WorkerRequest::Send {
+                to: Recipient::Chat(PEER.into()),
+                text: "hello".into(),
+                reply,
+            }))
+            .await;
+        assert_eq!(
+            answer.try_recv().unwrap(),
+            Err("ZapFast is not connected to WhatsApp".to_owned())
+        );
+        assert!(
+            !events
+                .try_iter()
+                .any(|event| matches!(event, Event::SendRefused { .. })),
+            "nothing goes back to the composer"
         );
     }
 

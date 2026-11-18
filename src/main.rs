@@ -120,6 +120,11 @@ enum Control {
     ReloadThemes,
     /// Quit an already-running ZapFast, which closing its window leaves in the tray.
     Quit,
+    /// Serve the Model Context Protocol on stdin and stdout, so an agent such
+    /// as Claude Code can list, read and send WhatsApp messages through the
+    /// running ZapFast. Needs Settings > System > Agent access (MCP).
+    /// Add it with `claude mcp add zapfast -- zapfast mcp`.
+    Mcp,
 }
 
 impl Control {
@@ -128,6 +133,8 @@ impl Control {
         match self {
             Control::ReloadThemes => "reload-themes",
             Control::Quit => "quit",
+            // Never sent: `run` serves it itself.
+            Control::Mcp => "ping",
         }
     }
 }
@@ -138,7 +145,7 @@ impl Control {
 fn control(command: &Control, sent: single_instance::Sent) -> (i32, Option<String>) {
     use single_instance::Sent;
     match (command, sent) {
-        (_, Sent::Taken) | (Control::Quit, Sent::NotRunning) => (0, None),
+        (Control::Mcp, _) | (_, Sent::Taken) | (Control::Quit, Sent::NotRunning) => (0, None),
         (Control::ReloadThemes, Sent::NotRunning) => (
             1,
             Some("ZapFast is not running, so there are no themes to reload.".to_owned()),
@@ -207,6 +214,11 @@ fn run() -> eframe::Result<()> {
     let launch = fastframe_update::intercept(&zapfast::updates::CONFIG);
     let cli = Cli::parse_from(&launch.arguments);
     let discovered = paths::AppDirs::discover();
+    // The MCP server is a client of the running copy's agent access: it
+    // never starts ZapFast, and only JSON-RPC goes to its stdout.
+    if let Some(Control::Mcp) = &cli.command {
+        std::process::exit(zapfast::mcp::serve(&discovered.runtime));
+    }
     // A control command only talks to the running copy: whatever the answer,
     // it never starts ZapFast and never stops a process itself.
     if let Some(command) = &cli.command {

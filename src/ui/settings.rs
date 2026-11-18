@@ -741,6 +741,14 @@ fn sections(app: &App) -> Vec<Section> {
         |settings| &mut settings.check_for_updates,
     );
     system.toggle(
+        translated(locale, "Agent access (MCP)"),
+        translated(
+            locale,
+            "Lets an agent on this computer, such as Claude Code through `zapfast mcp`, list your chats, read them and send messages as you. WhatsApp may ban accounts that automate messages.",
+        ),
+        |settings| &mut settings.agent_access,
+    );
+    system.toggle(
         translated(locale, "Download updates automatically"),
         translated(
             locale,

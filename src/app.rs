@@ -969,6 +969,13 @@ pub struct App {
     reopen: bool,
     /// Requests received from later launches.
     control_commands: Option<std::sync::Arc<std::sync::Mutex<Vec<ControlCommand>>>>,
+    /// The loopback listener for local agents, while agent access is on.
+    automation: Option<crate::automation::Server>,
+    /// Agent requests waiting for this frame.
+    automation_queue: crate::automation::Queue,
+    /// Whether agent access failed to start, so it is not retried every
+    /// frame until the setting changes.
+    automation_failed: bool,
     /// Chats and messages from clicked notifications.
     notification_opens: std::sync::Arc<std::sync::Mutex<Vec<crate::notify::NotificationTarget>>>,
     notifications: crate::notify::Notifications,
@@ -1806,6 +1813,9 @@ impl App {
             wayland: wayland_session(),
             reopen: false,
             control_commands: None,
+            automation: None,
+            automation_queue: Default::default(),
+            automation_failed: false,
             notification_opens: Default::default(),
             notifications: Default::default(),
             badge: None,
@@ -2449,6 +2459,183 @@ impl App {
     #[cfg(not(any(target_os = "linux", windows)))]
     fn panel_is_dark(&self) -> Option<bool> {
         None
+    }
+
+    /// Starts or stops agent access to follow Settings, then answers the
+    /// agents' requests. Only the running instance listens: demos and tests
+    /// never do.
+    fn handle_automation(&mut self) {
+        let wanted = self.settings.agent_access && self.control_commands.is_some();
+        if !self.settings.agent_access {
+            self.automation_failed = false;
+        }
+        if wanted && self.automation.is_none() && !self.automation_failed {
+            let waker = self.waker.clone();
+            match crate::automation::Server::start(
+                &self.dirs.runtime,
+                std::sync::Arc::clone(&self.automation_queue),
+                move || waker.wake(),
+            ) {
+                Ok(server) => self.automation = Some(server),
+                Err(error) => {
+                    log::warn!("could not start agent access: {error}");
+                    self.automation_failed = true;
+                    self.toast_error(crate::i18n::gettext(
+                        self.locale,
+                        "Could not start agent access",
+                    ));
+                }
+            }
+        } else if !wanted {
+            self.automation = None;
+        }
+        let pending: Vec<crate::automation::Pending> = std::mem::take(
+            &mut *self
+                .automation_queue
+                .lock()
+                .unwrap_or_else(|p| p.into_inner()),
+        );
+        for crate::automation::Pending { request, reply } in pending {
+            if let Some(answer) = self.automation_answer(request, &reply) {
+                let _ = reply.send(answer);
+            }
+        }
+    }
+
+    /// Answers what the app knows itself, and hands reading and sending to
+    /// the active account's worker, which answers on `reply`. Locked chats
+    /// stay out of reach, and nothing at all is answered while ZapFast is
+    /// locked.
+    fn automation_answer(
+        &mut self,
+        request: crate::automation::Request,
+        reply: &std::sync::mpsc::Sender<crate::automation::Reply>,
+    ) -> Option<crate::automation::Reply> {
+        use crate::automation::{MAX_CHATS, MAX_MESSAGES, Recipient, Request, WorkerRequest};
+        use serde_json::json;
+        if self.app_lock.is_locked() {
+            return Some(Err("ZapFast is locked. Unlock it first.".to_owned()));
+        }
+        match request {
+            Request::Status => Some(Ok(json!({
+                "connected": self.is_connected(),
+                "linked": self.is_linked(),
+                "account": self.me.as_deref().map(|me| me.split(['@', ':']).next().unwrap_or(me)),
+                "name": self.me_name,
+            }))),
+            Request::ListChats {
+                query,
+                unread_only,
+                limit,
+            } => {
+                let limit = limit.unwrap_or(50).clamp(1, MAX_CHATS);
+                let query = query
+                    .map(|query| query.trim().to_lowercase())
+                    .filter(|query| !query.is_empty());
+                let chats: Vec<serde_json::Value> = self
+                    .chats
+                    .iter()
+                    .filter(|chat| !chat.locked && (!unread_only || chat.looks_unread()))
+                    .map(|chat| (chat, self.chat_title(chat)))
+                    .filter(|(chat, title)| {
+                        query.as_deref().is_none_or(|query| {
+                            title.to_lowercase().contains(query) || chat.id.contains(query)
+                        })
+                    })
+                    .take(limit)
+                    .map(|(chat, title)| {
+                        json!({
+                            "id": chat.id,
+                            "name": title,
+                            "kind": if chat.is_channel() {
+                                "channel"
+                            } else if chat.is_group() {
+                                "group"
+                            } else {
+                                "direct"
+                            },
+                            "unread": chat.unread,
+                            "archived": chat.archived,
+                            "can_send": !(chat.is_channel() || chat.read_only || chat.left),
+                            "last_activity": chat.last_activity,
+                            "last_message": chat.last.as_ref().map(|last| json!({
+                                "from_me": last.from_me,
+                                "text": last.full,
+                            })),
+                        })
+                    })
+                    .collect();
+                Some(Ok(json!({ "chats": chats })))
+            }
+            Request::ReadMessages { chat, limit } => {
+                let chat = match self.automation_chat(&chat) {
+                    Ok(chat) => chat,
+                    Err(error) => return Some(Err(error)),
+                };
+                self.backend.send(Command::Automation(WorkerRequest::Read {
+                    chat,
+                    limit: limit.unwrap_or(20).clamp(1, MAX_MESSAGES),
+                    reply: reply.clone(),
+                }));
+                None
+            }
+            Request::SendMessage { to, text } => {
+                let text = text.trim().to_owned();
+                if text.is_empty() {
+                    return Some(Err("The message is empty".to_owned()));
+                }
+                if !self.is_connected() {
+                    return Some(Err("ZapFast is not connected to WhatsApp".to_owned()));
+                }
+                let to = match self.automation_chat(&to) {
+                    Ok(chat) => {
+                        if self
+                            .chat(&chat)
+                            .is_some_and(|chat| chat.is_channel() || chat.read_only || chat.left)
+                        {
+                            return Some(Err("You cannot send messages to this chat".to_owned()));
+                        }
+                        Recipient::Chat(chat)
+                    }
+                    // A number with no chat yet: WhatsApp is asked about it.
+                    Err(error) if to.contains('@') => return Some(Err(error)),
+                    Err(_) => match crate::util::international_phone(&to) {
+                        Some(digits) => Recipient::Phone(digits),
+                        None => {
+                            return Some(Err(
+                                "Give a chat id or a phone number in international form,                                  such as 5511987654321"
+                                    .to_owned(),
+                            ));
+                        }
+                    },
+                };
+                self.backend.send(Command::Automation(WorkerRequest::Send {
+                    to,
+                    text,
+                    reply: reply.clone(),
+                }));
+                None
+            }
+        }
+    }
+
+    /// The chat an agent names: an id in the chat list, or a phone number
+    /// that has a chat. Locked chats are never found.
+    fn automation_chat(&self, named: &str) -> Result<String, String> {
+        let named = named.trim();
+        let found = if named.contains('@') {
+            self.chat(named)
+        } else {
+            crate::util::international_phone(named).and_then(|digits| {
+                crate::automation::phone_forms(&digits)
+                    .iter()
+                    .find_map(|form| self.chat(&format!("{form}@s.whatsapp.net")))
+            })
+        };
+        match found {
+            Some(chat) if !chat.locked => Ok(chat.id.clone()),
+            _ => Err("There is no such chat; list_chats shows them".to_owned()),
+        }
     }
 
     fn handle_control_commands(&mut self) {
@@ -10471,6 +10658,7 @@ impl App {
         #[cfg(target_os = "macos")]
         self.actions.extend(crate::macos::drain(self.window_hidden));
         self.handle_control_commands();
+        self.handle_automation();
         self.poll_custom_themes();
         let wallpaper = self.account().settings.wallpaper_image.clone();
         self.wallpaper_image.sync(wallpaper.as_deref(), &self.waker);
@@ -21362,6 +21550,139 @@ mod tests {
         assert_eq!(
             app.drafts.get(chat).map(String::as_str),
             Some("-23.55050, -46.63330")
+        );
+    }
+
+    /// Asks the app what an agent would, and returns the answer it gives
+    /// itself, or `None` when the request went on to the worker.
+    fn ask_as_agent(
+        app: &mut App,
+        request: crate::automation::Request,
+    ) -> (
+        Option<crate::automation::Reply>,
+        std::sync::mpsc::Receiver<crate::automation::Reply>,
+    ) {
+        let (reply, answer) = std::sync::mpsc::channel();
+        app.automation_queue
+            .lock()
+            .unwrap()
+            .push(crate::automation::Pending { request, reply });
+        app.handle_automation();
+        (answer.try_recv().ok(), answer)
+    }
+
+    #[test]
+    fn agents_read_and_send_through_the_worker_but_never_reach_locked_chats() {
+        use crate::automation::{Recipient, Request, WorkerRequest};
+        let root = tempfile::tempdir().unwrap();
+        let (mut app, _) = App::headless(AppDirs::under(root.path()), Settings::default());
+        let (backend, mut commands, _events) = Backend::recording_with_events();
+        app.backend = backend;
+        app.link = LinkStatus::Connected;
+        app.chats.push(Chat::new(
+            "551187654321@s.whatsapp.net".into(),
+            "Bot".into(),
+        ));
+        let mut secret = Chat::new("5511999990000@s.whatsapp.net".into(), "Secret".into());
+        secret.locked = true;
+        app.chats.push(secret);
+        // Headless, nothing listens: only the running instance does.
+        app.settings.agent_access = true;
+
+        // The chat list leaves the locked chat out.
+        let (answer, _) = ask_as_agent(
+            &mut app,
+            Request::ListChats {
+                query: None,
+                unread_only: false,
+                limit: None,
+            },
+        );
+        assert!(app.automation.is_none());
+        let chats = answer.unwrap().unwrap();
+        let ids: Vec<_> = chats["chats"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|chat| chat["id"].as_str().unwrap().to_owned())
+            .collect();
+        assert_eq!(ids, ["551187654321@s.whatsapp.net"]);
+
+        // A Brazilian number typed with its ninth digit finds the chat
+        // stored without it, and the read goes on to the worker.
+        let (answer, _) = ask_as_agent(
+            &mut app,
+            Request::ReadMessages {
+                chat: "+55 11 98765-4321".into(),
+                limit: Some(1000),
+            },
+        );
+        assert!(answer.is_none());
+        let sent: Vec<_> = std::iter::from_fn(|| commands.try_recv().ok()).collect();
+        assert!(
+            matches!(sent.as_slice(), [Command::Automation(WorkerRequest::Read { chat, limit, .. })]
+            if chat == "551187654321@s.whatsapp.net" && *limit == crate::automation::MAX_MESSAGES)
+        );
+
+        // A locked chat is not there, whether read or written to.
+        let (answer, _) = ask_as_agent(
+            &mut app,
+            Request::ReadMessages {
+                chat: "5511999990000@s.whatsapp.net".into(),
+                limit: None,
+            },
+        );
+        assert!(answer.unwrap().is_err());
+        let (answer, _) = ask_as_agent(
+            &mut app,
+            Request::SendMessage {
+                to: "5511999990000@s.whatsapp.net".into(),
+                text: "hi".into(),
+            },
+        );
+        assert!(answer.unwrap().is_err());
+
+        // A number with no chat is handed over for WhatsApp to check.
+        let (answer, _) = ask_as_agent(
+            &mut app,
+            Request::SendMessage {
+                to: "4915112345678".into(),
+                text: " hello ".into(),
+            },
+        );
+        assert!(answer.is_none());
+        let sent: Vec<_> = std::iter::from_fn(|| commands.try_recv().ok()).collect();
+        assert!(
+            matches!(sent.as_slice(), [Command::Automation(WorkerRequest::Send { to: Recipient::Phone(phone), text, .. })]
+            if phone == "4915112345678" && text == "hello")
+        );
+
+        // Empty text, and text while offline, are refused here.
+        let (answer, _) = ask_as_agent(
+            &mut app,
+            Request::SendMessage {
+                to: "551187654321@s.whatsapp.net".into(),
+                text: "  ".into(),
+            },
+        );
+        assert!(answer.unwrap().is_err());
+        app.link = LinkStatus::Connecting;
+        let (answer, _) = ask_as_agent(
+            &mut app,
+            Request::SendMessage {
+                to: "551187654321@s.whatsapp.net".into(),
+                text: "hi".into(),
+            },
+        );
+        assert!(answer.unwrap().is_err());
+        assert!(commands.try_recv().is_err());
+
+        // Locked, ZapFast answers nothing at all.
+        app.app_lock = crate::app_lock::AppLock::new(true);
+        let (answer, _) = ask_as_agent(&mut app, Request::Status);
+        assert_eq!(
+            answer.unwrap(),
+            Err("ZapFast is locked. Unlock it first.".to_owned())
         );
     }
 

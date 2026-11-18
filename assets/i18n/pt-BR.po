@@ -4155,3 +4155,15 @@ msgstr "Desfocar mensagens"
 #: src/ui/settings.rs
 msgid "Message text, previews and media."
 msgstr "Texto das mensagens, prévias e mídia."
+
+#: src/ui/settings.rs
+msgid "Agent access (MCP)"
+msgstr "Acesso de agentes (MCP)"
+
+#: src/ui/settings.rs
+msgid "Lets an agent on this computer, such as Claude Code through `zapfast mcp`, list your chats, read them and send messages as you. WhatsApp may ban accounts that automate messages."
+msgstr "Permite que um agente neste computador, como o Claude Code pelo `zapfast mcp`, liste suas conversas, leia-as e envie mensagens em seu nome. O WhatsApp pode banir contas que automatizam mensagens."
+
+#: src/ui/settings.rs
+msgid "Could not start agent access"
+msgstr "Não foi possível iniciar o acesso de agentes"

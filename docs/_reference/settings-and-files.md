@@ -251,6 +251,9 @@ name or description, in the interface language or in English.
   General > Login Items, which macOS may ask you to allow there; inside a
   Flatpak the desktop's background portal asks first.
 - **Check for updates**: ask GitHub once a day whether a newer release exists.
+- **Agent access (MCP)**: let an agent on this computer, such as Claude Code,
+  list chats, read them and send text as you through `zapfast mcp`. Off by
+  default. See [Agent access (MCP)](#agent-access-mcp).
 - **Download updates automatically**: download and verify a new release in the
   background; restarting stays your choice. Package managers and Flatpak update
   ZapFast themselves.
@@ -334,6 +337,41 @@ beside the executable), the Windows installer, and the macOS app in
 Applications. AUR, DEB, RPM, Flatpak, Nix, Cargo, and Homebrew installations
 update through their package manager; an AppImage is replaced by downloading
 the new one.
+
+## Agent access (MCP)
+
+`zapfast mcp` is a [Model Context Protocol](https://modelcontextprotocol.io)
+server on stdin and stdout. It lets an agent use the WhatsApp account linked
+in the running ZapFast, for example to test a chatbot without taking over the
+WhatsApp Web you are typing in. Turn on **Settings > System > Agent access
+(MCP)**, then add it to the agent. For Claude Code:
+
+```sh
+claude mcp add zapfast -- zapfast mcp
+```
+
+Its tools:
+
+- `whatsapp_status`: whether ZapFast is connected, and the account's number.
+- `list_chats`: chats, most recent first, with their id, name, kind, unread
+  count and last message; `query` and `unread_only` narrow the list.
+- `read_messages`: a chat's latest messages, oldest first.
+- `send_message`: text to a chat id or to a phone number in international form
+  (`5511987654321`). A number with no chat yet is first checked with WhatsApp,
+  which also finds a Brazilian mobile registered without its ninth digit.
+- `wait_for_reply`: waits for new incoming messages in a chat, after the last
+  one you sent, and returns them once they stop for a few seconds, so a
+  chatbot's answer in several bubbles comes back whole.
+
+The agent uses the account shown in the window. Locked chats are never listed,
+read or written to, and nothing is answered while ZapFast is locked. While the
+setting is on, ZapFast listens on a loopback port and writes the port and a
+random token to `automation.json` in its runtime directory, readable only by
+you; `zapfast mcp` needs both. Nothing an agent reads or sends is logged.
+
+Messages an agent sends are real and go out as you. WhatsApp may ban accounts
+that send automated messages, so keep it to testing and to chats that expect
+it.
 
 ## The log
 

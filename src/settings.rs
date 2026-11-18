@@ -538,6 +538,9 @@ pub struct Settings {
     pub check_for_updates: bool,
     /// The privacy blur (Settings > Privacy).
     pub privacy_blur: PrivacyBlur,
+    /// Let a local agent, through `zapfast mcp`, list chats, read messages
+    /// and send text (see [`crate::automation`]).
+    pub agent_access: bool,
     /// Download verified updates in the background; restarting remains explicit.
     pub download_updates_automatically: bool,
     /// Voice and audio playback speed multiplier.
@@ -623,6 +626,7 @@ impl Default for Settings {
             proxy: String::new(),
             check_for_updates: true,
             privacy_blur: PrivacyBlur::NONE,
+            agent_access: false,
             download_updates_automatically: false,
             save_contacts_to_phone: true,
             voice_speed: 1.0,
