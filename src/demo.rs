@@ -3327,6 +3327,10 @@ pub fn apply_flags(app: &mut App, page: Option<&str>) {
                     messages: true,
                 };
             }
+            // Agent access on, with its Install in Claude Code row.
+            "agent-access" => {
+                app.settings.agent_access = true;
+            }
             "blur-people" => {
                 app.settings.privacy_blur = crate::settings::PrivacyBlur {
                     photos: true,

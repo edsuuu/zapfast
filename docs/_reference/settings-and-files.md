@@ -257,6 +257,10 @@ name or description, in the interface language or in English.
 - **Agent access (MCP)**: let an agent on this computer, such as Claude Code,
   list chats, read them and send text as you through `zapfast mcp`. Off by
   default. See [Agent access (MCP)](#agent-access-mcp).
+- **Install in Claude Code**: shown while agent access is on. **Install** adds
+  `zapfast mcp` to Claude Code's MCP servers for every project, replacing an
+  earlier `zapfast` entry; **Copy command** copies the command to run in a
+  terminal instead, the only way from a Flatpak.
 - **Download updates automatically**: download and verify a new release in the
   background; restarting stays your choice. Package managers and Flatpak update
   ZapFast themselves.
@@ -347,11 +351,18 @@ the new one.
 server on stdin and stdout. It lets an agent use the WhatsApp account linked
 in the running ZapFast, for example to test a chatbot without taking over the
 WhatsApp Web you are typing in. Turn on **Settings > System > Agent access
-(MCP)**, then add it to the agent. For Claude Code:
+(MCP)**, then add it to the agent. For Claude Code, **Install in Claude Code**
+right below does it, running Claude Code's own command:
 
 ```sh
-claude mcp add zapfast -- zapfast mcp
+claude mcp add --scope user zapfast -- /usr/bin/zapfast mcp
 ```
+
+with the path of the ZapFast that is running (an AppImage's own file, or
+`flatpak run rocks.zapfast.ZapFast mcp` from a Flatpak). ZapFast looks for
+`claude` on the `PATH` and where its installers put it, such as
+`~/.local/bin` and nvm's Node versions. Sessions started afterwards have the
+tools.
 
 Its tools:
 

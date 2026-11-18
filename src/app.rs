@@ -976,6 +976,8 @@ pub struct App {
     /// Whether agent access failed to start, so it is not retried every
     /// frame until the setting changes.
     automation_failed: bool,
+    /// Adding the MCP server to Claude Code, from Settings.
+    pub claude_code: crate::claude_code::Installer,
     /// Chats and messages from clicked notifications.
     notification_opens: std::sync::Arc<std::sync::Mutex<Vec<crate::notify::NotificationTarget>>>,
     notifications: crate::notify::Notifications,
@@ -1816,6 +1818,7 @@ impl App {
             automation: None,
             automation_queue: Default::default(),
             automation_failed: false,
+            claude_code: Default::default(),
             notification_opens: Default::default(),
             notifications: Default::default(),
             badge: None,
@@ -10143,6 +10146,10 @@ impl App {
             Action::SetStartWithSystem(enabled) => {
                 let waker = self.waker.clone();
                 self.login_item.set(enabled, move || waker.wake());
+            }
+            Action::InstallInClaudeCode => {
+                let waker = self.waker.clone();
+                self.claude_code.start(move || waker.wake());
             }
             Action::ZoomBy(delta) => {
                 self.settings.zoom = (self.settings.zoom + delta).clamp(0.6, 2.0);

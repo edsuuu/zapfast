@@ -3923,3 +3923,43 @@ msgstr ""
 #: src/ui/settings.rs
 msgid "Could not start agent access"
 msgstr ""
+
+#: src/ui/settings.rs
+msgid "Install in Claude Code"
+msgstr ""
+
+#: src/ui/settings.rs
+msgid "From a Flatpak, ZapFast cannot reach Claude Code: copy the command and run it in a terminal."
+msgstr ""
+
+#: src/ui/settings.rs
+msgid "Adds ZapFast to Claude Code's MCP servers, for every project."
+msgstr ""
+
+#: src/ui/settings.rs
+msgid "Installing…"
+msgstr ""
+
+#: src/ui/settings.rs
+msgid "Installed. Start a new Claude Code session to use it."
+msgstr ""
+
+#: src/ui/settings.rs
+msgid "Claude Code was not found. Copy the command and run it in a terminal."
+msgstr ""
+
+#: src/ui/settings.rs
+msgid "Claude Code could not add it: {error}"
+msgstr ""
+
+#: src/ui/settings.rs
+msgid "Reinstall"
+msgstr ""
+
+#: src/ui/settings.rs
+msgid "Install"
+msgstr ""
+
+#: src/ui/settings.rs
+msgid "Copy command"
+msgstr ""

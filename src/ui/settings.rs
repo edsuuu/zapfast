@@ -753,6 +753,9 @@ fn sections(app: &App) -> Vec<Section> {
         ),
         |settings| &mut settings.agent_access,
     );
+    if app.settings.agent_access {
+        claude_code_row(app, &mut system);
+    }
     system.toggle(
         translated(locale, "Download updates automatically"),
         translated(
@@ -1635,6 +1638,72 @@ fn storage_bar_row(
         }
     }
     ui.add_space(8.0);
+}
+
+/// Adds the MCP server to Claude Code, or gives the command to run in a
+/// terminal where ZapFast cannot.
+fn claude_code_row(app: &App, section: &mut Section) {
+    use crate::claude_code::Status;
+    let locale = app.locale;
+    let status = app.claude_code.status();
+    // A Flatpak cannot run the host's programs.
+    let flatpak = std::env::var_os("FLATPAK_ID").is_some();
+    let description = match &status {
+        Status::Idle if flatpak => translated(
+            locale,
+            "From a Flatpak, ZapFast cannot reach Claude Code: copy the command and run it in a terminal.",
+        ),
+        Status::Idle => translated(
+            locale,
+            "Adds ZapFast to Claude Code's MCP servers, for every project.",
+        ),
+        Status::Installing => translated(locale, "Installing…"),
+        Status::Installed => translated(
+            locale,
+            "Installed. Start a new Claude Code session to use it.",
+        ),
+        Status::NotFound => translated(
+            locale,
+            "Claude Code was not found. Copy the command and run it in a terminal.",
+        ),
+        Status::Failed(said) => {
+            let text = translated(locale, "Claude Code could not add it: {error}");
+            Text {
+                shown: text.shown.replace("{error}", said).into(),
+                source: text.source.replace("{error}", said).into(),
+            }
+        }
+    };
+    let installing = status == Status::Installing;
+    let installed = status == Status::Installed;
+    section.row(
+        translated(locale, "Install in Claude Code"),
+        description,
+        move |ui, app| {
+            let palette = app.palette;
+            // Right to left: the main button sits at the edge.
+            if !flatpak {
+                let label = if installed {
+                    crate::i18n::gettext(locale, "Reinstall")
+                } else {
+                    crate::i18n::gettext(locale, "Install")
+                };
+                let install = ui
+                    .add_enabled_ui(!installing, |ui| {
+                        theme::pill_button(ui, &palette, &label, true)
+                    })
+                    .inner;
+                if install.clicked() {
+                    app.actions.push(Action::InstallInClaudeCode);
+                }
+            }
+            let copy = crate::i18n::gettext(locale, "Copy command");
+            if theme::pill_button(ui, &palette, &copy, false).clicked() {
+                app.actions
+                    .push(Action::CopyText(crate::claude_code::manual_command()));
+            }
+        },
+    );
 }
 
 /// A titled group of settings on a rounded card.

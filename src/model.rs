@@ -3319,6 +3319,8 @@ pub enum Action {
     },
     /// Registers or removes the login entry that starts ZapFast in the tray.
     SetStartWithSystem(bool),
+    /// Adds ZapFast's MCP server to Claude Code (see [`crate::claude_code`]).
+    InstallInClaudeCode,
     /// Sets the sound for mentions and replies to us (`true`) or for
     /// other new messages.
     SetNotificationSound {

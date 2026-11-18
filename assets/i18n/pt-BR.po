@@ -4175,3 +4175,43 @@ msgstr "Permite que um agente neste computador, como o Claude Code pelo `zapfast
 #: src/ui/settings.rs
 msgid "Could not start agent access"
 msgstr "Não foi possível iniciar o acesso de agentes"
+
+#: src/ui/settings.rs
+msgid "Install in Claude Code"
+msgstr "Instalar no Claude Code"
+
+#: src/ui/settings.rs
+msgid "From a Flatpak, ZapFast cannot reach Claude Code: copy the command and run it in a terminal."
+msgstr "No Flatpak, o ZapFast não alcança o Claude Code: copie o comando e rode-o num terminal."
+
+#: src/ui/settings.rs
+msgid "Adds ZapFast to Claude Code's MCP servers, for every project."
+msgstr "Adiciona o ZapFast aos servidores MCP do Claude Code, para todos os projetos."
+
+#: src/ui/settings.rs
+msgid "Installing…"
+msgstr "Instalando…"
+
+#: src/ui/settings.rs
+msgid "Installed. Start a new Claude Code session to use it."
+msgstr "Instalado. Abra uma nova sessão do Claude Code para usar."
+
+#: src/ui/settings.rs
+msgid "Claude Code was not found. Copy the command and run it in a terminal."
+msgstr "O Claude Code não foi encontrado. Copie o comando e rode-o num terminal."
+
+#: src/ui/settings.rs
+msgid "Claude Code could not add it: {error}"
+msgstr "O Claude Code não conseguiu adicionar: {error}"
+
+#: src/ui/settings.rs
+msgid "Reinstall"
+msgstr "Reinstalar"
+
+#: src/ui/settings.rs
+msgid "Install"
+msgstr "Instalar"
+
+#: src/ui/settings.rs
+msgid "Copy command"
+msgstr "Copiar comando"
