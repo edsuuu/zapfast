@@ -19,6 +19,16 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-00a884" alt="MIT license"></a>
 </p>
 
+> [!NOTE]
+> **Este é o fork [edsuuu/zapfast](https://github.com/edsuuu/zapfast)** de
+> [crmne/zapfast](https://github.com/crmne/zapfast). Além do upstream, ele traz:
+> servidor MCP para agentes (`zapfast mcp`, veja
+> [Agent access](docs/_reference/settings-and-files.md#agent-access-mcp)),
+> desfoque de privacidade de fotos, nomes e mensagens, canais num lugar
+> próprio, som de notificação no estilo do WhatsApp, fonte e contraste do
+> WhatsApp Web atual e um balão de "digitando" do tamanho certo. Instale e
+> atualize pelo apt: [packaging/deb/README.md](packaging/deb/README.md).
+
 ZapFast is a WhatsApp client written in Rust with
 [egui](https://www.egui.rs) and [fastframe](https://fastframe.dev), the
 framework behind a family of native desktop apps. It links to your phone as a
