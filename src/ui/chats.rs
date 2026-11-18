@@ -1590,8 +1590,8 @@ fn row(app: &mut App, ui: &mut egui::Ui, chat: &Chat) -> egui::Response {
         };
         let stamp_galley = ui
             .painter()
-            .layout_no_wrap(stamp, theme::regular(11.5), stamp_color);
-        let name_top = rect.top() + 14.0;
+            .layout_no_wrap(stamp, theme::regular(12.0), stamp_color);
+        let name_top = rect.top() + 12.0;
         ui.painter().galley(
             pos2(right - stamp_galley.size().x, name_top + 1.0),
             stamp_galley.clone(),
@@ -1599,16 +1599,16 @@ fn row(app: &mut App, ui: &mut egui::Ui, chat: &Chat) -> egui::Response {
         );
         let name_width = (right - stamp_galley.size().x - 8.0 - left).max(0.0);
         let name_font = if unread {
-            theme::semibold(14.5)
+            theme::semibold(16.0)
         } else {
-            theme::medium(14.5)
+            theme::medium(16.0)
         };
         let name = widgets::line(ui, &title, name_font, palette.text, name_width, 1);
         name.paint(ui, pos2(left, name_top), palette.text);
 
         // Leave room for badges beside the latest-message preview.
         let mut badge_right = right;
-        let line_y = rect.top() + 38.0;
+        let line_y = rect.top() + 37.0;
         if unread {
             let width = widgets::unread_indicator(
                 ui,
@@ -1662,7 +1662,7 @@ fn row(app: &mut App, ui: &mut egui::Ui, chat: &Chat) -> egui::Response {
             widgets::line(
                 ui,
                 &who,
-                theme::medium(13.0),
+                theme::medium(14.0),
                 palette.accent,
                 badge_right - x,
                 1,
@@ -1673,7 +1673,7 @@ fn row(app: &mut App, ui: &mut egui::Ui, chat: &Chat) -> egui::Response {
             let label = widgets::line(
                 ui,
                 &label,
-                theme::medium(13.0),
+                theme::medium(14.0),
                 palette.accent,
                 (badge_right - x) * 0.5,
                 1,
@@ -1684,7 +1684,7 @@ fn row(app: &mut App, ui: &mut egui::Ui, chat: &Chat) -> egui::Response {
             widgets::line(
                 ui,
                 &draft,
-                theme::regular(13.0),
+                theme::regular(14.0),
                 preview_color,
                 (badge_right - x).max(0.0),
                 1,
@@ -1713,7 +1713,7 @@ fn row(app: &mut App, ui: &mut egui::Ui, chat: &Chat) -> egui::Response {
                 let sender = widgets::line(
                     ui,
                     &prefix,
-                    theme::regular(13.0),
+                    theme::regular(14.0),
                     preview_color,
                     (badge_right - x) * 0.5,
                     1,
@@ -1728,7 +1728,7 @@ fn row(app: &mut App, ui: &mut egui::Ui, chat: &Chat) -> egui::Response {
                     &app.resolve_mention_tokens(&last.summary_in(app.locale)),
                     &[],
                 ),
-                theme::regular(13.0),
+                theme::regular(14.0),
                 preview_color,
                 (badge_right - x).max(0.0),
                 1,
@@ -1744,7 +1744,7 @@ fn row(app: &mut App, ui: &mut egui::Ui, chat: &Chat) -> egui::Response {
             }
             words
         } else {
-            widgets::line(ui, "", theme::regular(13.0), preview_color, 1.0, 1)
+            widgets::line(ui, "", theme::regular(14.0), preview_color, 1.0, 1)
         };
         preview.paint(ui, pos2(x, line_y), preview_color);
     }

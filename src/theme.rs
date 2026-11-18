@@ -105,30 +105,34 @@ pub enum BubbleStyle {
 }
 
 impl Palette {
+    /// WhatsApp Web's dark theme as its 2025 design draws it: the
+    /// `--WDS-*` tokens of web.whatsapp.com's stylesheet (neutral greys, the
+    /// bubbles `#242626` and `#144D37`, text `#FAFAFA`).
     pub fn dark() -> Self {
         Self {
             dark: true,
-            window: Color32::from_rgb(0x0b, 0x14, 0x1a),
-            panel: Color32::from_rgb(0x11, 0x1b, 0x21),
-            surface: Color32::from_rgb(0x20, 0x2c, 0x33),
-            surface_hover: Color32::from_rgb(0x2a, 0x39, 0x42),
-            surface_active: Color32::from_rgb(0x35, 0x44, 0x4d),
-            outline: Color32::from_rgb(0x22, 0x2d, 0x34),
-            text: Color32::from_rgb(0xe9, 0xed, 0xef),
+            window: Color32::from_rgb(0x16, 0x17, 0x17),
+            panel: Color32::from_rgb(0x16, 0x17, 0x17),
+            surface: Color32::from_rgb(0x24, 0x26, 0x26),
+            surface_hover: Color32::from_rgb(0x2e, 0x30, 0x30),
+            surface_active: Color32::from_rgb(0x38, 0x3a, 0x3a),
+            outline: Color32::from_rgb(0x2d, 0x2e, 0x2e),
+            text: Color32::from_rgb(0xfa, 0xfa, 0xfa),
+            // `--WDS-content-deemphasized`, white at 60%, laid on the panel.
             // Secondary and dim text reach WCAG AA (4.5:1) on the window,
             // panel, surface, and menu colours.
-            secondary: Color32::from_rgb(0x97, 0xa5, 0xae),
-            dim: Color32::from_rgb(0x8a, 0x98, 0x9f),
-            accent: Color32::from_rgb(0x00, 0xa8, 0x84),
-            accent_hover: Color32::from_rgb(0x06, 0xcf, 0x9c),
-            on_accent: Color32::from_rgb(0x0b, 0x14, 0x1a),
-            danger: Color32::from_rgb(0xf1, 0x5c, 0x6d),
+            secondary: Color32::from_rgb(0xa2, 0xa3, 0xa3),
+            dim: Color32::from_rgb(0x95, 0x99, 0x9b),
+            accent: Color32::from_rgb(0x21, 0xc0, 0x63),
+            accent_hover: Color32::from_rgb(0x25, 0xd3, 0x66),
+            on_accent: Color32::from_rgb(0x0a, 0x0a, 0x0a),
+            danger: Color32::from_rgb(0xfb, 0x50, 0x61),
             warning: Color32::from_rgb(0xff, 0xd2, 0x79),
-            overlay: Color32::from_rgb(0x23, 0x31, 0x38),
+            overlay: Color32::from_rgb(0x24, 0x26, 0x26),
             shadow: Color32::from_black_alpha(140),
-            chat: Color32::from_rgb(0x0b, 0x14, 0x1a),
-            bubble_in: Color32::from_rgb(0x20, 0x2c, 0x33),
-            bubble_out: Color32::from_rgb(0x00, 0x5c, 0x4b),
+            chat: Color32::from_rgb(0x16, 0x17, 0x17),
+            bubble_in: Color32::from_rgb(0x24, 0x26, 0x26),
+            bubble_out: Color32::from_rgb(0x14, 0x4d, 0x37),
             link: Color32::from_rgb(0x53, 0xbd, 0xeb),
             read: Color32::from_rgb(0x53, 0xbd, 0xeb),
             bubbles: BubbleStyle::WhatsApp,
@@ -201,22 +205,25 @@ impl Palette {
         }
     }
 
+    /// WhatsApp Web's light theme as its 2025 design draws it, from the same
+    /// tokens as [`Palette::dark`]: warm greys, the chat's `#F5F1EB`, text
+    /// `#0A0A0A`.
     pub fn light() -> Self {
         Self {
             dark: false,
-            window: Color32::from_rgb(0xf0, 0xf2, 0xf5),
+            window: Color32::from_rgb(0xf7, 0xf5, 0xf3),
             panel: Color32::from_rgb(0xff, 0xff, 0xff),
-            surface: Color32::from_rgb(0xf0, 0xf2, 0xf5),
-            surface_hover: Color32::from_rgb(0xe6, 0xe9, 0xec),
-            surface_active: Color32::from_rgb(0xd9, 0xdd, 0xe1),
-            outline: Color32::from_rgb(0xe9, 0xed, 0xef),
-            text: Color32::from_rgb(0x11, 0x1b, 0x21),
-            // Secondary and dim text reach WCAG AA (4.5:1) on the window,
-            // panel, surface, chat, and menu colours. The accent is the green
-            // WhatsApp uses in its light theme, readable as text on white and
-            // under white button labels.
-            secondary: Color32::from_rgb(0x51, 0x5f, 0x67),
-            dim: Color32::from_rgb(0x63, 0x6b, 0x72),
+            surface: Color32::from_rgb(0xf7, 0xf5, 0xf3),
+            surface_hover: Color32::from_rgb(0xef, 0xec, 0xe9),
+            surface_active: Color32::from_rgb(0xe5, 0xe1, 0xdd),
+            outline: Color32::from_rgb(0xe6, 0xe6, 0xe6),
+            text: Color32::from_rgb(0x0a, 0x0a, 0x0a),
+            // `--WDS-content-deemphasized`, black at 60%. Secondary and dim
+            // text reach WCAG AA (4.5:1) on the window, panel, surface,
+            // chat, and menu colours. The accent is WhatsApp's darker green,
+            // readable as text on white and under white button labels.
+            secondary: Color32::from_rgb(0x5c, 0x5c, 0x5c),
+            dim: Color32::from_rgb(0x63, 0x65, 0x65),
             accent: Color32::from_rgb(0x00, 0x80, 0x69),
             accent_hover: Color32::from_rgb(0x00, 0x6e, 0x5a),
             on_accent: Color32::WHITE,
@@ -224,7 +231,7 @@ impl Palette {
             warning: Color32::from_rgb(0xa0, 0x6b, 0x00),
             overlay: Color32::from_rgb(0xff, 0xff, 0xff),
             shadow: Color32::from_black_alpha(LIGHT_SHADOW_ALPHA),
-            chat: Color32::from_rgb(0xef, 0xea, 0xe2),
+            chat: Color32::from_rgb(0xf5, 0xf1, 0xeb),
             bubble_in: Color32::from_rgb(0xff, 0xff, 0xff),
             bubble_out: Color32::from_rgb(0xd9, 0xfd, 0xd3),
             link: Color32::from_rgb(0x02, 0x7e, 0xb5),
@@ -680,9 +687,15 @@ pub fn apply(ctx: &egui::Context, palette: &Palette) {
     };
     visuals.dark_mode = palette.dark;
     // Hinting, sub-pixel positions and glyph coverage as the desktop draws
-    // them. On Linux coverage stays linear in both themes, as FreeType and
-    // cairo draw it; egui's dark curve (2c - c²) made text heavier than GTK's.
+    // them, except light text on a dark palette: linear coverage, as FreeType
+    // and cairo draw it, left it thin and grey beside the same chat in a
+    // browser, which boosts light-on-dark text. egui's dark curve
+    // (2c - c²) matches what WhatsApp Web shows in Chrome.
     text_rendering().apply_to_visuals(visuals);
+    if palette.dark {
+        visuals.text_options.color_transfer_function =
+            egui::epaint::FontColorTransferFunction::DARK_MODE_DEFAULT;
+    }
     visuals.panel_fill = palette.panel;
     visuals.window_fill = palette.overlay;
     visuals.extreme_bg_color = palette.surface;
@@ -1685,26 +1698,35 @@ mod tests {
     }
 
     /// The palette decides the theme, and the desktop's rendering its text
-    /// options: linear coverage in both themes on Linux, as GTK draws it.
+    /// options, except that light text on a dark palette always takes egui's
+    /// dark curve: on Linux, where GTK's linear coverage would apply, it drew
+    /// the chat thinner and greyer than WhatsApp Web in a browser.
     #[test]
     fn text_follows_the_desktop_rendering_in_both_themes() {
+        use egui::epaint::FontColorTransferFunction;
         let rendering = text_rendering();
         for palette in [Palette::dark(), Palette::light()] {
             let ctx = egui::Context::default();
             apply(&ctx, &palette);
             let options = ctx.global_style().visuals.text_options;
+            let expected = if palette.dark {
+                FontColorTransferFunction::DARK_MODE_DEFAULT
+            } else {
+                rendering.color_transfer_function(false)
+            };
             assert_eq!(
-                options.color_transfer_function,
-                rendering.color_transfer_function(palette.dark),
+                options.color_transfer_function, expected,
                 "dark: {}",
                 palette.dark
             );
             assert_eq!(options.subpixel_binning, rendering.subpixel_positioning);
             #[cfg(target_os = "linux")]
-            assert_eq!(
-                options.color_transfer_function,
-                egui::epaint::FontColorTransferFunction::Off
-            );
+            if !palette.dark {
+                assert_eq!(
+                    options.color_transfer_function,
+                    FontColorTransferFunction::Off
+                );
+            }
         }
     }
 

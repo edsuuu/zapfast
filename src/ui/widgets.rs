@@ -1574,15 +1574,16 @@ pub fn bubble_shape(
 /// The text size Messages lays its balloons out for on the Mac: ChatKit's
 /// `CKUIBehaviorMac.balloonTextFont` is the 13 pt system font.
 pub const MESSAGES_TEXT_SIZE: f32 = 13.0;
-/// The size of a message's text in ZapFast, every theme alike.
-pub const MESSAGE_TEXT_SIZE: f32 = 14.5;
+/// The size of a message's text in ZapFast, every theme alike: WhatsApp
+/// Web's `--body-font-size`, 15 px.
+pub const MESSAGE_TEXT_SIZE: f32 = 15.0;
 /// How much larger than Messages' own a ZapFast balloon is drawn: its
 /// geometry keeps Apple's proportions to the text it holds.
 pub const MESSAGES_SCALE: f32 = MESSAGE_TEXT_SIZE / MESSAGES_TEXT_SIZE;
 
 /// How round a picture without a bubble is in the Messages style: a single
 /// line's corner, [`balloon::PILL_RADIUS`] at [`MESSAGES_SCALE`], rounded.
-pub const MESSAGES_BUBBLE_RADIUS: u8 = 15;
+pub const MESSAGES_BUBBLE_RADIUS: u8 = 16;
 
 /// Apple's message balloon, as the vector artwork ChatKit masks Messages'
 /// balloons with on the Mac: the `mac-bubble`, `mac-bubble-tailless` and
@@ -2659,8 +2660,9 @@ mod tests {
         assert_eq!(fingerprint, WHATSAPP_BUBBLES);
     }
 
-    /// The fingerprint [`whatsapp_bubbles_are_unchanged`] recorded.
-    const WHATSAPP_BUBBLES: u64 = 0x179b_3424_7615_2b9a;
+    /// The fingerprint [`whatsapp_bubbles_are_unchanged`] recorded, with the
+    /// bubble colours of WhatsApp Web's 2025 palettes.
+    const WHATSAPP_BUBBLES: u64 = 0xb87e_0a68_5b2c_c69a;
 
     /// Every shape-checking test below draws into this view.
     const SCREEN: egui::Rangef = egui::Rangef {
