@@ -100,8 +100,10 @@ git -c user.name="$(git -C "$root" config user.name)" -c user.email="$(git -C "$
 git push -qf "https://github.com/${repo}.git" gh-pages
 cd "$root"
 
-# Serve the branch on Pages the first time.
+# Serve the branch on Pages the first time. GitHub may already have turned
+# Pages on for a new gh-pages branch by itself.
 if ! gh api "repos/${repo}/pages" > /dev/null 2>&1; then
-  gh api -X POST "repos/${repo}/pages" -f 'source[branch]=gh-pages' -f 'source[path]=/' > /dev/null
+  gh api -X POST "repos/${repo}/pages" -f 'source[branch]=gh-pages' -f 'source[path]=/' > /dev/null 2>&1 \
+    || gh api "repos/${repo}/pages" > /dev/null
 fi
 echo "published zapfast ${version} at ${base}/apt"
