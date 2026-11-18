@@ -1,6 +1,7 @@
 //! The privacy blur, as WA Web Plus has it: contact photos, names and
-//! numbers, and optionally the messages themselves, drawn out of focus until
-//! the pointer rests on them, so a glance at the screen gives nothing away.
+//! numbers, the chat list's previews and the open chat's messages, each
+//! drawn out of focus until the pointer rests on it, so a glance at the
+//! screen gives nothing away.
 //!
 //! egui has no filters, so a blur is drawn the way a lens smears: every shape
 //! painted for the hidden content is repainted as twenty faint copies
@@ -36,7 +37,12 @@ pub fn names() -> bool {
     CHOICE.with(Cell::get).names
 }
 
-/// Whether message text, previews and media are blurred.
+/// Whether the latest message under each chat in the list is blurred.
+pub fn previews() -> bool {
+    CHOICE.with(Cell::get).previews
+}
+
+/// Whether message text and media in the open chat are blurred.
 pub fn messages() -> bool {
     CHOICE.with(Cell::get).messages
 }
@@ -220,10 +226,16 @@ mod tests {
         set(PrivacyBlur {
             photos: true,
             names: false,
+            previews: false,
             messages: true,
         });
-        assert!(photos() && !names() && messages());
+        assert!(photos() && !names() && !previews() && messages());
+        set(PrivacyBlur {
+            previews: true,
+            ..PrivacyBlur::NONE
+        });
+        assert!(previews() && !messages());
         set(PrivacyBlur::NONE);
-        assert!(!photos() && !names() && !messages());
+        assert!(!photos() && !names() && !previews() && !messages());
     }
 }

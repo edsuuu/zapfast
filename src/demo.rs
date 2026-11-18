@@ -3323,6 +3323,7 @@ pub fn apply_flags(app: &mut App, page: Option<&str>) {
                 app.settings.privacy_blur = crate::settings::PrivacyBlur {
                     photos: true,
                     names: true,
+                    previews: true,
                     messages: true,
                 };
             }
@@ -3330,7 +3331,7 @@ pub fn apply_flags(app: &mut App, page: Option<&str>) {
                 app.settings.privacy_blur = crate::settings::PrivacyBlur {
                     photos: true,
                     names: true,
-                    messages: false,
+                    ..crate::settings::PrivacyBlur::NONE
                 };
             }
             "messages" => {

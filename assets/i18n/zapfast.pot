@@ -3897,11 +3897,19 @@ msgid "In the chat list, the open chat's header and group messages."
 msgstr ""
 
 #: src/ui/settings.rs
-msgid "Blur messages"
+msgid "Blur chat list previews"
 msgstr ""
 
 #: src/ui/settings.rs
-msgid "Message text, previews and media."
+msgid "The latest message under each chat in the list."
+msgstr ""
+
+#: src/ui/settings.rs
+msgid "Blur messages in the open chat"
+msgstr ""
+
+#: src/ui/settings.rs
+msgid "Message text and media. The bubbles stay sharp."
 msgstr ""
 
 #: src/ui/settings.rs

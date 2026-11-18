@@ -4149,12 +4149,20 @@ msgid "In the chat list, the open chat's header and group messages."
 msgstr "Na lista de conversas, no cabeçalho da conversa aberta e nas mensagens de grupo."
 
 #: src/ui/settings.rs
-msgid "Blur messages"
-msgstr "Desfocar mensagens"
+msgid "Blur chat list previews"
+msgstr "Desfocar prévias na lista de conversas"
 
 #: src/ui/settings.rs
-msgid "Message text, previews and media."
-msgstr "Texto das mensagens, prévias e mídia."
+msgid "The latest message under each chat in the list."
+msgstr "A última mensagem embaixo de cada conversa da lista."
+
+#: src/ui/settings.rs
+msgid "Blur messages in the open chat"
+msgstr "Desfocar mensagens na conversa aberta"
+
+#: src/ui/settings.rs
+msgid "Message text and media. The bubbles stay sharp."
+msgstr "Texto e mídia das mensagens. Os balões continuam nítidos."
 
 #: src/ui/settings.rs
 msgid "Agent access (MCP)"

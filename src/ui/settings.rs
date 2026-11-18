@@ -607,8 +607,13 @@ fn sections(app: &App) -> Vec<Section> {
         |settings| &mut settings.privacy_blur.names,
     );
     privacy.toggle(
-        translated(locale, "Blur messages"),
-        translated(locale, "Message text, previews and media."),
+        translated(locale, "Blur chat list previews"),
+        translated(locale, "The latest message under each chat in the list."),
+        |settings| &mut settings.privacy_blur.previews,
+    );
+    privacy.toggle(
+        translated(locale, "Blur messages in the open chat"),
+        translated(locale, "Message text and media. The bubbles stay sharp."),
         |settings| &mut settings.privacy_blur.messages,
     );
     app_lock_rows(app, &mut privacy);

@@ -1637,7 +1637,7 @@ fn row(app: &mut App, ui: &mut egui::Ui, chat: &Chat) -> egui::Response {
         }
         // A group's preview names who wrote or types, so names hide it too.
         let preview_start = super::blur::mark(ui);
-        let hide_preview = super::blur::messages() || (super::blur::names() && chat.is_group());
+        let hide_preview = super::blur::previews() || (super::blur::names() && chat.is_group());
         let mut x = left;
         let typing = app.typing_in(&chat.id);
         let preview_color = if unread && !muted {

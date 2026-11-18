@@ -411,13 +411,16 @@ pub enum NotificationSound {
 }
 
 /// What the privacy blur hides until the pointer rests on it, as WA Web
-/// Plus offers: contact and group photos, names and numbers, and message
-/// text, previews and media. All off by default.
+/// Plus offers: contact and group photos, names and numbers, the previews in
+/// the chat list, and the messages in the open chat. All off by default.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(default)]
+#[serde(from = "StoredPrivacyBlur")]
 pub struct PrivacyBlur {
     pub photos: bool,
     pub names: bool,
+    /// The latest message under each chat in the list.
+    pub previews: bool,
+    /// Message text and media in the open chat.
     pub messages: bool,
 }
 
@@ -426,12 +429,36 @@ impl PrivacyBlur {
     pub const NONE: Self = Self {
         photos: false,
         names: false,
+        previews: false,
         messages: false,
     };
 
     /// Whether anything is blurred.
     pub fn any(self) -> bool {
-        self.photos || self.names || self.messages
+        self.photos || self.names || self.previews || self.messages
+    }
+}
+
+/// The blur as saved. ZapFast 0.22.0 had one switch for previews and
+/// messages alike, saved as `messages`: without `previews`, the previews
+/// follow it.
+#[derive(Default, Deserialize)]
+#[serde(default)]
+struct StoredPrivacyBlur {
+    photos: bool,
+    names: bool,
+    previews: Option<bool>,
+    messages: bool,
+}
+
+impl From<StoredPrivacyBlur> for PrivacyBlur {
+    fn from(stored: StoredPrivacyBlur) -> Self {
+        Self {
+            photos: stored.photos,
+            names: stored.names,
+            previews: stored.previews.unwrap_or(stored.messages),
+            messages: stored.messages,
+        }
     }
 }
 
@@ -1023,6 +1050,34 @@ mod tests {
         let path = dir.path().join("settings.json");
         std::fs::write(&path, "{}").unwrap();
         assert_eq!(Settings::load(&path).theme, ThemeChoice::System);
+    }
+
+    #[test]
+    fn the_blur_keeps_previews_and_messages_apart_and_reads_the_old_switch() {
+        let read = |json: &str| -> PrivacyBlur { serde_json::from_str(json).unwrap() };
+        // 0.22.0 blurred previews and messages with one switch.
+        assert_eq!(
+            read(r#"{"photos":true,"names":false,"messages":true}"#),
+            PrivacyBlur {
+                photos: true,
+                names: false,
+                previews: true,
+                messages: true,
+            }
+        );
+        assert_eq!(read(r#"{"messages":false}"#), PrivacyBlur::NONE);
+        // Saved apart, each keeps its own value.
+        for (previews, messages) in [(true, false), (false, true)] {
+            let blur = PrivacyBlur {
+                previews,
+                messages,
+                ..PrivacyBlur::NONE
+            };
+            assert_eq!(read(&serde_json::to_string(&blur).unwrap()), blur);
+        }
+        assert_eq!(Settings::default().privacy_blur, PrivacyBlur::NONE);
+        let settings: Settings = serde_json::from_str("{}").unwrap();
+        assert_eq!(settings.privacy_blur, PrivacyBlur::NONE);
     }
 
     #[test]

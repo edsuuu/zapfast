@@ -219,14 +219,17 @@ name or description, in the interface language or in English.
   as on the phone. Group receipts and voice-message played receipts are
   unaffected.
 - **Show when you are typing**: send typing and recording state.
-- **Blur contact photos**, **Blur names and numbers**, **Blur messages**: a
-  privacy blur, as WA Web Plus offers, so a glance at the screen gives nothing
-  away. Photos cover the chat list, the open chat's header, group senders and
-  who is typing; names cover the chat list, the header and its subtitle, group
-  sender names and the names in quoted replies (and a group's preview, which
-  names its sender); messages cover message text, previews and media. Each
-  part shows as it is while the pointer rests on it. All off by default;
-  saved as `privacy_blur` in `settings.json`.
+- **Blur contact photos**, **Blur names and numbers**, **Blur chat list
+  previews**, **Blur messages in the open chat**: a privacy blur, as WA Web
+  Plus offers, so a glance at the screen gives nothing away. Photos cover the
+  chat list, the open chat's header, group senders and who is typing; names
+  cover the chat list, the header and its subtitle, group sender names and the
+  names in quoted replies (and a group's preview, which names its sender);
+  previews cover the latest message under each chat in the list; messages
+  cover message text and media in the open chat, leaving the bubbles sharp.
+  Each part shows as it is while the pointer rests on it. All off by default;
+  saved as `privacy_blur` in `settings.json`, where settings from 0.22.0,
+  which had one switch for previews and messages, keep both blurred.
 - **Last seen**, **Online**, **Profile photo**, **About**, **Groups**, **Read
   receipts**, **Calls**: your WhatsApp account privacy, stored on WhatsApp's
   servers and shared with your phone. They can be changed while connected.
