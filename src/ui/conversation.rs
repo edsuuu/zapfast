@@ -1726,7 +1726,7 @@ fn composer(app: &mut App, ui: &mut egui::Ui, chat: &Chat, review_send: Option<b
             // field and the panel holding it grow on the keystroke that wraps
             // a line rather than a frame later, which made them jump.
             let wrap_id = id.with("wrap");
-            let text_height = ui
+            let draft_height = ui
                 .ctx()
                 .data(|data| data.get_temp::<f32>(wrap_id))
                 .map(|wrap| {
@@ -1738,8 +1738,13 @@ fn composer(app: &mut App, ui: &mut egui::Ui, chat: &Chat, review_send: Option<b
                         .y
                 })
                 .or_else(|| ui.ctx().read_response(id).map(|previous| previous.rect.height()))
-                .unwrap_or(line_height)
-                .clamp(line_height, line_height * 6.0);
+                .unwrap_or(line_height);
+            let text_height = draft_height.clamp(line_height, line_height * 6.0);
+            // Only a draft past six lines scrolls. Below that the field is as
+            // tall as its text, but the empty field's hint and the text edit's
+            // own row height can come out taller than the measured line, which
+            // put a scroll bar on an empty composer.
+            let composer_scrolls = draft_height > line_height * 6.0 + 0.5;
             let row_height = (text_height + 2.0 * field_margin).max(line);
             let pill = widgets::raised(ui, &palette, composer_pill(&palette), |ui| {
             ui.allocate_ui_with_layout(
@@ -1821,12 +1826,20 @@ fn composer(app: &mut App, ui: &mut egui::Ui, chat: &Chat, review_send: Option<b
                         // Grow from one to six lines, then scroll. The height
                         // is this frame's draft, measured above, rather than
                         // the scroll area's memory of the last frame.
-                        egui::ScrollArea::vertical()
+                        let scroll = egui::ScrollArea::vertical()
                             .id_salt("composer-scroll")
                             .max_height(text_height)
                             .min_scrolled_height(text_height)
-                            .auto_shrink([false, false])
-                            .show(ui, |ui| {
+                            .auto_shrink([false, false]);
+                        let scroll = if composer_scrolls {
+                            scroll
+                        } else {
+                            scroll
+                                .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysHidden)
+                                .scroll_source(egui::scroll_area::ScrollSource::NONE)
+                                .vertical_scroll_offset(0.0)
+                        };
+                        scroll.show(ui, |ui| {
                                 // Keep emoji in the buffer so character offsets match, then
                                 // paint their color bitmaps over the transparent glyphs.
                                 let mut clusters: Vec<(usize, usize, String)> = Vec::new();
