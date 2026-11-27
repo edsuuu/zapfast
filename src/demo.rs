@@ -24153,16 +24153,11 @@ mod long_chat_tests {
             .expect("the off-screen selection anchor remains copyable");
         assert!(copied.contains(&format!("Row {anchor} ")), "{copied:?}");
         assert!(copied.contains("Second line 🦊 café"), "{copied:?}");
+        // The drag may stop inside the next message's first word, which copies
+        // a cut number such as "Row 14". Only whole numbers name a message.
         let selected: Vec<i64> = copied
             .lines()
-            .filter_map(|line| {
-                line.split_once("Row ")?
-                    .1
-                    .split_whitespace()
-                    .next()?
-                    .parse()
-                    .ok()
-            })
+            .filter_map(|line| line.split_once("Row ")?.1.split_once(' ')?.0.parse().ok())
             .collect();
         assert!(
             selected.len() >= 5,
