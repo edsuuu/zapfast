@@ -90,6 +90,10 @@ const PHONE_PATIENCE: Duration = Duration::from_secs(30);
 const PHONE_BATCH: i32 = 50;
 /// `HistorySync.sync_type` for on-demand history responses.
 const ON_DEMAND: i32 = 6;
+/// How long after the phone's last initial-sync chunk that sync still counts
+/// as running when it has not reached 100%. Phones pause between chunks while
+/// they read their database, so a gap of a minute or two is normal.
+const UPLOAD_PATIENCE: Duration = Duration::from_secs(5 * 60);
 /// Maximum attachment-preview dimension.
 const THUMBNAIL_SIDE: u32 = 96;
 /// WhatsApp's profile pictures are 640 pixels square.
@@ -1027,6 +1031,7 @@ pub async fn run(
         qr: None,
         syncing: false,
         sync_deadline: None,
+        phone_upload: None,
         group_info_requested: HashSet::new(),
         leave_generation: HashMap::new(),
         subject_generation: HashMap::new(),
@@ -1578,6 +1583,11 @@ struct Worker {
     qr: Option<String>,
     syncing: bool,
     sync_deadline: Option<Instant>,
+    /// When the phone's initial history upload last sent a chunk, while it has
+    /// not reached 100%. On-demand history requests wait meanwhile: asked for
+    /// in the middle of that upload, the phone dropped it and told its owner
+    /// the sync with this device was interrupted.
+    phone_upload: Option<Instant>,
     /// Groups queued or already requested. Queries are rate-limited.
     group_info_requested: HashSet<String>,
     /// Pending group metadata queue.
@@ -2537,6 +2547,13 @@ impl Worker {
         }
         self.set_status(LinkStatus::Connecting);
         tokio::spawn(async move { client.reconnect_immediately().await });
+    }
+
+    /// Whether the phone is still uploading its initial history: a chunk
+    /// below 100% arrived within [`UPLOAD_PATIENCE`].
+    fn phone_uploading(&self) -> bool {
+        self.phone_upload
+            .is_some_and(|last| last.elapsed() < UPLOAD_PATIENCE)
     }
 
     fn set_syncing(&mut self, syncing: bool) {
@@ -6277,6 +6294,7 @@ impl Worker {
             self.set_syncing(true);
             if let Some(progress) = lazy.progress() {
                 self.emit(Event::SyncProgress(progress.min(100)));
+                self.phone_upload = (progress < 100).then(Instant::now);
             }
         }
         let compressed = lazy.compressed_bytes().clone();
@@ -7032,6 +7050,19 @@ impl Worker {
             }
             return false;
         }
+        if !explicit && self.phone_uploading() {
+            // The phone is still sending its first history, which is likely
+            // to bring this chat's messages anyway. Only a request the reader
+            // made goes out now.
+            if !background {
+                self.emit(Event::OlderFetched {
+                    chat,
+                    more: true,
+                    silent: false,
+                });
+            }
+            return false;
+        }
         if self.archive.history_start(&chat).unwrap_or(false) {
             // The phone already said it has nothing older.
             if !background {
@@ -7206,7 +7237,7 @@ impl Worker {
     /// reader scrolling up does not run into the phone's rate limit. The
     /// chats to ask come from the queue `prefetch::State` keeps in memory.
     fn pump_prefetch(&mut self) {
-        if !self.status.is_connected() || !self.prefetch.on {
+        if !self.status.is_connected() || !self.prefetch.on || self.phone_uploading() {
             return;
         }
         if self.prefetch.needs_chats() {
@@ -20568,6 +20599,7 @@ mod receipt_tests {
             qr: None,
             syncing: false,
             sync_deadline: None,
+            phone_upload: None,
             group_info_requested: HashSet::new(),
             leave_generation: HashMap::new(),
             subject_generation: HashMap::new(),
@@ -27504,6 +27536,31 @@ mod older_history_tests {
                 .next_history(Instant::now() + prefetch::HISTORY_GAP, false)
                 .as_deref(),
             Some("other@s.whatsapp.net")
+        );
+    }
+
+    /// While the phone is still uploading its first history, automatic
+    /// requests wait: asked for mid-upload, the phone dropped the upload and
+    /// reported the sync as interrupted. The wait ends with the upload, or
+    /// once the phone has been silent for a while.
+    #[test]
+    fn automatic_history_requests_wait_for_the_phones_upload() {
+        let (mut worker, events, _, _) = receipt_tests::worker();
+        prefetching(&mut worker);
+        worker.phone_upload = Some(Instant::now());
+        assert!(worker.phone_uploading());
+        assert!(!worker.fetch_older(CHAT.to_owned(), false, false));
+        assert!(!worker.fetch_older(CHAT.to_owned(), false, true));
+        assert!(worker.pending_older.is_empty(), "nothing went to the phone");
+        assert_eq!(
+            silences(&drain(&events)),
+            [false],
+            "the chat that asked is told, so its spinner stops"
+        );
+        worker.phone_upload = Instant::now().checked_sub(UPLOAD_PATIENCE * 2);
+        assert!(
+            !worker.phone_uploading(),
+            "a stalled upload stops holding requests"
         );
     }
 

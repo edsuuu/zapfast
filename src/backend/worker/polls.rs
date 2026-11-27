@@ -98,7 +98,7 @@ impl Worker {
             log::info!("poll recovery: phone history timed out; retry scheduled");
             self.emit_message(&chat, &id);
         }
-        if !self.status.is_connected() || !self.pending_older.is_empty() {
+        if !self.status.is_connected() || !self.pending_older.is_empty() || self.phone_uploading() {
             return;
         }
         let Some(client) = self.client.clone() else {
