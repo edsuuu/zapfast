@@ -175,6 +175,7 @@ pub fn respond(app: &mut App) {
                     Content::Sticker {
                         media,
                         animated: false,
+                        sound: None,
                     },
                 );
                 row.quoted = quoting.and_then(|id| quote(app, &chat, id));

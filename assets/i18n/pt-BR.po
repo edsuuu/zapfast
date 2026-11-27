@@ -3223,6 +3223,10 @@ msgstr "Mostrar a foto"
 msgid "Play motion photo"
 msgstr "Reproduzir foto com movimento"
 
+#: src/ui/conversation.rs
+msgid "Play sticker sound"
+msgstr "Tocar som da figurinha"
+
 #: src/ui/image_preview.rs:738
 msgid "This image could not be displayed in ZapFast."
 msgstr "O ZapFast não conseguiu mostrar esta imagem."

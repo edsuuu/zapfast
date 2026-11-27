@@ -677,6 +677,9 @@ pub struct App {
     pub image_preview: Option<PreviewState>,
     /// The motion photo whose clip plays over it: its chat and message.
     pub motion_playing: Option<(ChatId, String)>,
+    /// The audio sticker clicked while its sound downloads, which plays
+    /// when it lands.
+    sticker_sound_wanted: Option<(ChatId, String)>,
     /// Sticker currently shown large.
     pub sticker_view: Option<crate::image_preview::StickerPreview>,
     /// Photos and playable videos of the open chat, oldest first, as the viewer
@@ -1687,6 +1690,7 @@ impl App {
             pauses_media: false,
             image_preview: None,
             motion_playing: None,
+            sticker_sound_wanted: None,
             sticker_view: None,
             viewer_media: Vec::new(),
             viewer_media_chat: None,
@@ -2055,6 +2059,7 @@ impl App {
         self.video_chat = None;
         self.video_wanted = None;
         self.motion_playing = None;
+        self.sticker_sound_wanted = None;
         self.voice_chat = None;
         self.voice_clip_chat = None;
         self.voice_wanted = None;
@@ -4731,6 +4736,33 @@ impl App {
                     }
                 }
             }
+            Event::StickerSound {
+                chat,
+                message,
+                result,
+            } => {
+                // Played only for the click that asked for it, in the chat
+                // still on screen.
+                let wanted =
+                    self.sticker_sound_wanted.as_ref() == Some(&(chat.clone(), message.clone()));
+                if wanted {
+                    self.sticker_sound_wanted = None;
+                }
+                let open = !self.events_hidden && self.open_chat.as_deref() == Some(chat.as_str());
+                let Some(sound) = self.sticker_sound_mut(&chat, &message) else {
+                    return;
+                };
+                match result {
+                    Ok(path) => {
+                        sound.path = Some(path.clone());
+                        sound.state = MediaState::Idle;
+                        if wanted && open {
+                            self.play_sticker_sound(message, path);
+                        }
+                    }
+                    Err(error) => sound.state = MediaState::Failed(error),
+                }
+            }
             Event::Syncing(syncing) => {
                 if self.syncing && !syncing {
                     self.toast("History loaded");
@@ -6077,6 +6109,17 @@ impl App {
     fn motion_mut(&mut self, chat: &str, id: &str) -> Option<&mut crate::model::Motion> {
         match &mut self.conversations.get_mut(chat)?.message_mut(id)?.content {
             Content::Image { motion, .. } => motion.as_mut(),
+            _ => None,
+        }
+    }
+
+    fn sticker_sound_mut(
+        &mut self,
+        chat: &str,
+        id: &str,
+    ) -> Option<&mut crate::model::StickerSound> {
+        match &mut self.conversations.get_mut(chat)?.message_mut(id)?.content {
+            Content::Sticker { sound, .. } => sound.as_mut(),
             _ => None,
         }
     }
@@ -7987,6 +8030,24 @@ impl App {
                     .is_some_and(|motion| motion.path.is_none())
                 {
                     self.actions.push(Action::DownloadMotion { chat, message });
+                }
+            }
+            Action::ToggleStickerSound { chat, message } => {
+                let Some(sound) = self.sticker_sound_mut(&chat, &message) else {
+                    return;
+                };
+                match sound.path.clone() {
+                    Some(path) => self.play_sticker_sound(message, path),
+                    None => {
+                        if !matches!(sound.state, MediaState::Downloading) {
+                            sound.state = MediaState::Downloading;
+                            self.backend.send(Command::DownloadStickerSound {
+                                chat: chat.clone(),
+                                message: message.clone(),
+                            });
+                        }
+                        self.sticker_sound_wanted = Some((chat, message));
+                    }
                 }
             }
             Action::DownloadMotion { chat, message } => {
@@ -11164,6 +11225,20 @@ impl App {
     }
 
     /// Plays or pauses audio and sends the first played receipt when needed.
+    /// Plays or stops an audio sticker's sound in the voice player, at its
+    /// own speed: the chat's voice speed is for voice messages. Nothing is
+    /// marked played, as WhatsApp does not for a sticker.
+    fn play_sticker_sound(&mut self, message: String, path: PathBuf) {
+        self.video.stop();
+        self.voice_wanted = None;
+        self.voice_chat = self.open_chat.clone();
+        self.voice_clip_chat = self.open_chat.clone();
+        self.player.set_speed(1.0);
+        if let Err(error) = self.player.toggle(&message, &path) {
+            self.toast_error(error);
+        }
+    }
+
     fn play_voice(&mut self, message: String, path: PathBuf) {
         self.video.stop();
         self.voice_wanted = None;
@@ -17860,6 +17935,7 @@ mod tests {
         sticker.content = Content::Sticker {
             media: media(Some(paths[3].clone())),
             animated: false,
+            sound: None,
         };
         rows.push(sticker);
         let mut pending = message("chat", "pending", 7);

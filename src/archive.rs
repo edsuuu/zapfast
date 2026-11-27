@@ -6236,6 +6236,7 @@ mod sticker_tests {
                     state: MediaState::Idle,
                 },
                 animated: false,
+                sound: None,
             },
             status: Delivery::None,
             delivered_at: None,
@@ -6690,6 +6691,7 @@ mod media_path_tests {
                 Content::Sticker {
                     media: media(),
                     animated: false,
+                    sound: None,
                 },
             ),
             (

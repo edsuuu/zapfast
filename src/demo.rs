@@ -767,6 +767,7 @@ pub fn populate(app: &mut App) {
                         Some(256),
                     ),
                     animated: true,
+                    sound: None,
                 },
             );
             if let Content::Sticker { media, .. } = &mut row.content {
@@ -13968,6 +13969,7 @@ mod tests {
         if let Content::Sticker {
             media,
             animated: flag,
+            ..
         } = &mut row.content
         {
             media.path = Some(path.clone());

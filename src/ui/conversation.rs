@@ -8337,8 +8337,15 @@ fn content(
                 )
             }
         }
-        Content::Sticker { media, animated } => {
-            picture(ui, view, message, media, width, Some(*animated), actions);
+        Content::Sticker {
+            media,
+            animated,
+            sound,
+        } => {
+            let drawn = picture(ui, view, message, media, width, Some(*animated), actions);
+            if let Some(sound) = sound {
+                sticker_sound(ui, view, message, sound, drawn, actions);
+            }
             None
         }
         Content::Video {
@@ -10578,6 +10585,58 @@ fn motion_clip(
     if let MediaState::Failed(error) = &motion.state {
         response.on_hover_text(error);
     }
+}
+
+/// Draws an audio sticker's speaker badge in the corner of the sticker. A
+/// click on it plays the sound, or stops it.
+fn sticker_sound(
+    ui: &mut egui::Ui,
+    view: &View<'_>,
+    message: &Message,
+    sound: &crate::model::StickerSound,
+    sticker: Rect,
+    actions: &mut Vec<Action>,
+) {
+    if !ui.is_rect_visible(sticker) {
+        return;
+    }
+    let badge = Rect::from_min_size(
+        egui::pos2(sticker.left() + 6.0, sticker.bottom() - 34.0),
+        Vec2::splat(28.0),
+    );
+    let response = ui
+        .interact(
+            badge,
+            bubble_id(&view.chat.id, &message.id).with("sticker-sound"),
+            Sense::click(),
+        )
+        .on_hover_cursor(egui::CursorIcon::PointingHand);
+    if response.clicked() {
+        actions.push(Action::ToggleStickerSound {
+            chat: view.chat.id.clone(),
+            message: message.id.clone(),
+        });
+    }
+    let state = view.player.status(&message.id).state;
+    let icon = match (&sound.state, state) {
+        (_, crate::audio::State::Loading) | (MediaState::Downloading, _) => None,
+        (_, crate::audio::State::Playing) => Some(Icon::Pause),
+        (MediaState::Failed(_), _) => Some(Icon::CircleAlert),
+        _ => Some(Icon::Volume2),
+    };
+    ui.painter()
+        .circle_filled(badge.center(), 14.0, Color32::from_black_alpha(140));
+    match icon {
+        Some(icon) => theme::paint_icon(ui, icon, badge, 14.0, Color32::WHITE),
+        None => theme::paint_spinner(ui, badge, 16.0, Color32::WHITE),
+    }
+    let label = crate::i18n::gettext(view.locale, "Play sticker sound");
+    let response = match &sound.state {
+        MediaState::Failed(error) => response.on_hover_text(error),
+        _ => response.on_hover_text(label.as_ref()),
+    };
+    ui.ctx()
+        .accesskit_node_builder(response.id, |node| node.set_label(label.as_ref()));
 }
 
 /// Whether this content downloads on its own once drawn, as the bubbles decide
@@ -13581,6 +13640,7 @@ mod reaction_tests {
             row(Content::Sticker {
                 media: media("image/webp", path, Idle),
                 animated: false,
+                sound: None,
             }),
         ]
     }

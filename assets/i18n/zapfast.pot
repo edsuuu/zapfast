@@ -3043,6 +3043,10 @@ msgstr ""
 msgid "Play motion photo"
 msgstr ""
 
+#: src/ui/conversation.rs
+msgid "Play sticker sound"
+msgstr ""
+
 #: src/ui/image_preview.rs:738
 msgid "This image could not be displayed in ZapFast."
 msgstr ""

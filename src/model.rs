@@ -825,6 +825,9 @@ pub enum Content {
     Sticker {
         media: Media,
         animated: bool,
+        /// The sound an audio sticker plays when clicked.
+        #[serde(default)]
+        sound: Option<StickerSound>,
     },
     /// A WhatsApp sticker pack shared in a chat. Its stickers download when
     /// someone opens it.
@@ -1838,6 +1841,21 @@ impl Media {
     pub fn is_within_download_limit(&self) -> bool {
         self.size <= ATTACHMENT_DOWNLOAD_LIMIT
     }
+}
+
+/// The sound of an audio sticker. Its download keys stay in the archive's
+/// copy of the message, and the file in the media cache, so neither is
+/// stored here.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct StickerSound {
+    #[serde(default)]
+    pub seconds: Option<u32>,
+    /// Decrypted downloaded file.
+    #[serde(skip)]
+    pub path: Option<PathBuf>,
+    /// Non-persisted download state.
+    #[serde(skip)]
+    pub state: MediaState,
 }
 
 /// A motion photo's clip. Its download keys stay in the archive.
@@ -2874,6 +2892,11 @@ pub enum Action {
     /// Plays a motion photo's clip over its photo, downloading it first, or
     /// goes back to the photo.
     ToggleMotion {
+        chat: ChatId,
+        message: String,
+    },
+    /// Plays or stops an audio sticker's sound, downloading it first.
+    ToggleStickerSound {
         chat: ChatId,
         message: String,
     },
@@ -4384,6 +4407,7 @@ mod tests {
                 Content::Sticker {
                     media: media(),
                     animated: false,
+                    sound: None,
                 },
             ),
             row(
