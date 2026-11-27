@@ -25,24 +25,48 @@ Precisa de Debian 12+, Ubuntu 23.04+ ou derivados (glibc 2.36), amd64.
 
 1. Suba a versão em `Cargo.toml` (e o `Cargo.lock`), escreva
    `packaging/release-notes/v<versão>.md`, faça o commit e o push no `main`.
-2. Rode `packaging/deb/release.sh`. Ele:
-   - compila em Debian 12 dentro do Docker (`in-container.sh`, imagem
-     `zapfast-deb-build` do `Dockerfile`, criada na primeira vez);
-   - monta `target/deb/dist/zapfast_<versão>_amd64.deb` (`build-deb.sh`);
-   - cria a release `v<versão>` no GitHub com o `.deb`;
-   - refaz o ramo `gh-pages` com o repositório apt assinado (`publish-apt.sh`)
-     e liga o GitHub Pages na primeira vez.
+2. Rode `packaging/deb/release.sh`, que confere isso e sobe a tag
+   `v<versão>`. A tag dispara o workflow **Fork release**
+   (`.github/workflows/fork-release.yml`), que:
+   - compila em Debian 12 dentro do Docker (`build-deb.sh`, com
+     `in-container.sh` e a imagem do `Dockerfile`);
+   - cria a release `v<versão>` no GitHub com o `.deb` e as notas;
+   - refaz o ramo `gh-pages` com o repositório apt assinado (`publish-apt.sh`).
+
+Não precisa de Docker nem da chave na sua máquina: só do `git` e de acesso de
+escrita ao repositório. Para publicar de novo uma tag, rode o workflow pela aba
+Actions com a tag no campo `tag`.
 
 Só a última versão fica no repositório apt: o `gh-pages` é refeito do zero.
-Para a busca de GIFs vir embutida, exporte `ZAPFAST_GIPHY_KEY` antes do build;
-sem ela, cada um pode pôr a própria chave nas Configurações.
+Para a busca de GIFs vir embutida, crie o segredo `ZAPFAST_GIPHY_KEY` no
+repositório; sem ele, cada um pode pôr a própria chave nas Configurações.
 
 ## A chave de assinatura
 
-Fica em `~/.config/zapfast-apt/gnupg` (ou em `ZAPFAST_APT_GNUPGHOME`), fora do
-repositório, sem senha; o primeiro `publish-apt.sh` a cria. **Faça backup dessa
-pasta.** Sem ela, uma chave nova obriga cada instalação a baixar o
-`zapfast.gpg` de novo.
+O workflow assina com o segredo `ZAPFAST_APT_SIGNING_KEY` do repositório: a
+chave privada em ASCII (armored), sem senha, com o nome
+`ZapFast apt (edsuuu/zapfast) <111332935+edsuuu@users.noreply.github.com>`.
+A chave atual (impressão digital `8B62E61F44E466880C62E894DDEF75D275C85089`)
+foi criada em 27/11/2026, quando a anterior se perdeu.
+
+Para trocar a chave, gere outra e grave o segredo:
+
+```bash
+export GNUPGHOME=~/.config/zapfast-apt/gnupg
+mkdir -p "$GNUPGHOME" && chmod 700 "$GNUPGHOME"
+gpg --batch --passphrase '' --quick-gen-key \
+  "ZapFast apt (edsuuu/zapfast) <111332935+edsuuu@users.noreply.github.com>" rsa4096 sign never
+gpg --batch --armor --export-secret-keys \
+  "ZapFast apt (edsuuu/zapfast) <111332935+edsuuu@users.noreply.github.com>" \
+  | gh secret set ZAPFAST_APT_SIGNING_KEY -R edsuuu/zapfast
+```
+
+**Guarde uma cópia da pasta `GNUPGHOME`:** o GitHub não devolve o segredo. Com
+uma chave nova, cada instalação precisa baixar o `zapfast.gpg` de novo:
+
+```bash
+curl -fsSL https://edsuuu.github.io/zapfast/apt/zapfast.gpg | sudo tee /usr/share/keyrings/zapfast.gpg > /dev/null
+```
 
 ## Testes no mesmo container
 

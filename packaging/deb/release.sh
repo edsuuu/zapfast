@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
-# Releases the version in Cargo.toml from this fork: builds the .deb, makes
-# the GitHub release vVERSION with it and the notes in
-# packaging/release-notes/vVERSION.md, and publishes the apt repository.
-# Run it on main, committed and pushed.
+# Releases the version in Cargo.toml from this fork: checks that main is
+# committed and pushed with packaging/release-notes/vVERSION.md, then pushes
+# the tag vVERSION. The Fork release workflow (.github/workflows/fork-release.yml)
+# builds the .deb, makes the GitHub release and publishes the apt repository.
 #
 #   packaging/deb/release.sh
+#
+# To publish from this machine instead, with Docker and the signing key in
+# ZAPFAST_APT_GNUPGHOME, run build-deb.sh and publish-apt.sh by hand.
 set -euo pipefail
 root=$(cd "$(dirname "$0")/../.." && pwd)
 cd "$root"
@@ -18,11 +21,6 @@ die() { echo "$*" >&2; exit 1; }
 git fetch -q origin main
 [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ] || die "push main first"
 
-deb=$(packaging/deb/build-deb.sh | tail -1)
-if gh release view "$tag" -R "$repo" > /dev/null 2>&1; then
-  gh release upload "$tag" "$deb" -R "$repo" --clobber
-else
-  gh release create "$tag" "$deb" -R "$repo" --target "$(git rev-parse HEAD)" \
-    --title "ZapFast ${version}" --notes-file "$notes"
-fi
-packaging/deb/publish-apt.sh "$deb"
+git tag -a "$tag" -m "ZapFast ${version}"
+git push -q "https://github.com/${repo}.git" "refs/tags/${tag}"
+echo "pushed ${tag}; follow it at https://github.com/${repo}/actions/workflows/fork-release.yml"

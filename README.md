@@ -86,6 +86,10 @@ sudo apt update && sudo apt install zapfast
 - **Atualizar:** `sudo apt update && sudo apt upgrade`. O ZapFast avisa quando
   sai uma versão nova [nas releases deste fork](https://github.com/edsuuu/zapfast/releases)
   e deixa a instalação para o apt.
+- **Chave nova desde a 0.24.0:** o repositório passou a ser assinado com outra
+  chave. Se o `apt update` reclamar de `NO_PUBKEY` ou de assinatura inválida,
+  baixe a chave de novo uma vez:
+  `curl -fsSL https://edsuuu.github.io/zapfast/apt/zapfast.gpg | sudo tee /usr/share/keyrings/zapfast.gpg > /dev/null`.
 - **Sem o repositório:** baixe o `zapfast_<versão>_amd64.deb` da
   [última release](https://github.com/edsuuu/zapfast/releases/latest) e rode
   `sudo apt install ./zapfast_<versão>_amd64.deb`.

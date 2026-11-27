@@ -1,0 +1,85 @@
+name: Fork release
+
+# Publishes this fork's release from a v* tag on main: builds the .deb in
+# Debian 12 (packaging/deb/build-deb.sh), creates the GitHub release with the
+# notes in packaging/release-notes/<tag>.md, and rebuilds the signed apt
+# repository on gh-pages (packaging/deb/publish-apt.sh). The apt signing key
+# is the ZAPFAST_APT_SIGNING_KEY secret, an armored private key without a
+# passphrase. Run it again from the Actions tab to republish a tag.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to publish, such as v0.24.0
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fork-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: deb, release and apt
+    if: github.repository == 'edsuuu/zapfast'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    permissions:
+      contents: write
+      # publish-apt.sh checks that Pages serves gh-pages.
+      pages: read
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+      ZAPFAST_GIPHY_KEY: ${{ secrets.ZAPFAST_GIPHY_KEY }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          fetch-depth: 0
+      - name: Check the tag, version and notes
+        run: |
+          version=$(sed -n 's/^version = "\(.*\)"$/\1/p' Cargo.toml | head -1)
+          [ "$TAG" = "v$version" ] || { echo "::error::$TAG does not match version $version in Cargo.toml"; exit 1; }
+          [ -f "packaging/release-notes/$TAG.md" ] || { echo "::error::write packaging/release-notes/$TAG.md first"; exit 1; }
+          git fetch --no-tags origin refs/heads/main:refs/remotes/origin/main
+          git merge-base --is-ancestor HEAD refs/remotes/origin/main \
+            || { echo "::error::$TAG is not on main"; exit 1; }
+      - uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cache/zapfast-build
+            target/deb
+          key: deb-${{ hashFiles('Cargo.lock', 'packaging/deb/Dockerfile') }}
+          restore-keys: deb-
+      - name: Build the .deb in Debian 12
+        run: |
+          deb=$(packaging/deb/build-deb.sh | tail -1)
+          echo "DEB=$deb" >> "$GITHUB_ENV"
+      - name: GitHub release
+        run: |
+          version=${TAG#v}
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release upload "$TAG" "$DEB" --clobber
+          else
+            gh release create "$TAG" "$DEB" --verify-tag \
+              --title "ZapFast $version" --notes-file "packaging/release-notes/$TAG.md"
+          fi
+      - name: Publish the apt repository
+        env:
+          ZAPFAST_APT_SIGNING_KEY: ${{ secrets.ZAPFAST_APT_SIGNING_KEY }}
+        run: |
+          [ -n "$ZAPFAST_APT_SIGNING_KEY" ] || { echo "::error::the ZAPFAST_APT_SIGNING_KEY secret is missing"; exit 1; }
+          sudo apt-get update -qq && sudo apt-get install -y -qq dpkg-dev > /dev/null
+          export ZAPFAST_APT_GNUPGHOME="$RUNNER_TEMP/gnupg"
+          mkdir -p "$ZAPFAST_APT_GNUPGHOME" && chmod 700 "$ZAPFAST_APT_GNUPGHOME"
+          printf '%s\n' "$ZAPFAST_APT_SIGNING_KEY" \
+            | GNUPGHOME="$ZAPFAST_APT_GNUPGHOME" gpg --batch --quiet --import
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --global url."https://x-access-token:${GH_TOKEN}@github.com/".insteadOf "https://github.com/"
+          packaging/deb/publish-apt.sh "$DEB"
